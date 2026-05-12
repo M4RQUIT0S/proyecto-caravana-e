@@ -1,13 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, Trash2, Tags, BellRing, X, Check } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Trash2,
+  Tags,
+  BellRing,
+  X,
+  Check,
+  Pencil,
+  Download,
+  FileSpreadsheet,
+  FileText,
+} from "lucide-react";
 import { useApp } from "@/lib/context";
 import { rolEnCampo } from "@/lib/auth";
 import { uid, update } from "@/lib/storage";
 import { Modal } from "@/components/Modal";
+import { exportarAnimalesCSV, exportarAnimalesXLSX } from "@/lib/export";
 import type { Animal, Alerta } from "@/lib/types";
 
 export default function AnimalesPage() {
@@ -15,11 +28,13 @@ export default function AnimalesPage() {
   const sp = useSearchParams();
   const { db, user, refresh } = useApp();
   const rol = rolEnCampo(user!.id, id);
-  const puedeEditar = rol === "admin" || rol === "usuario";
+  const puedeCrear = rol === "admin" || rol === "usuario";
+  const esAdmin = rol === "admin";
 
   const [filtro, setFiltro] = useState("");
   const [loteSel, setLoteSel] = useState(sp.get("lote") ?? "");
   const [open, setOpen] = useState(false);
+  const [editando, setEditando] = useState<Animal | null>(null);
   const [detalle, setDetalle] = useState<Animal | null>(null);
 
   const lotes = db.lotes.filter((l) => l.campoId === id);
@@ -73,7 +88,13 @@ export default function AnimalesPage() {
             </option>
           ))}
         </select>
-        {puedeEditar && (
+        {animales.length > 0 && (
+          <ExportarMenu
+            onCSV={() => exportarAnimalesCSV(animales, lotes)}
+            onXLSX={() => exportarAnimalesXLSX(animales, lotes)}
+          />
+        )}
+        {puedeCrear && (
           <button onClick={() => setOpen(true)} className="btn-primary text-sm">
             <Plus size={14} /> Nuevo animal
           </button>
@@ -124,16 +145,29 @@ export default function AnimalesPage() {
                       <span className="text-ink-dim text-xs">—</span>
                     )}
                   </div>
-                  {puedeEditar ? (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        eliminar(a.id);
-                      }}
-                      className="text-ink-dim hover:text-red-300 justify-self-end"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                  {esAdmin ? (
+                    <div className="flex items-center gap-2 justify-self-end">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditando(a);
+                        }}
+                        className="text-ink-dim hover:text-accent"
+                        title="Editar animal"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          eliminar(a.id);
+                        }}
+                        className="text-ink-dim hover:text-red-300"
+                        title="Eliminar animal"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   ) : (
                     <span />
                   )}
@@ -144,10 +178,10 @@ export default function AnimalesPage() {
         </div>
       )}
 
-      <NuevoAnimalModal
+      <AnimalFormModal
         open={open}
         onClose={() => setOpen(false)}
-        onCreate={() => {
+        onSaved={() => {
           setOpen(false);
           refresh();
         }}
@@ -155,43 +189,66 @@ export default function AnimalesPage() {
         loteSel={loteSel && loteSel !== "_sin" ? loteSel : undefined}
       />
 
+      <AnimalFormModal
+        open={!!editando}
+        onClose={() => setEditando(null)}
+        onSaved={() => {
+          setEditando(null);
+          refresh();
+        }}
+        campoId={id}
+        animal={editando ?? undefined}
+      />
+
       <AnimalDetalle
         animal={detalle}
         onClose={() => setDetalle(null)}
-        puedeEditar={!!puedeEditar}
+        puedeEditar={!!puedeCrear}
         onChange={refresh}
       />
     </div>
   );
 }
 
-function NuevoAnimalModal({
+function AnimalFormModal({
   open,
   onClose,
-  onCreate,
+  onSaved,
   campoId,
   loteSel,
+  animal,
 }: {
   open: boolean;
   onClose: () => void;
-  onCreate: () => void;
+  onSaved: () => void;
   campoId: string;
   loteSel?: string;
+  animal?: Animal;
 }) {
   const { db } = useApp();
   const lotes = db.lotes.filter((l) => l.campoId === campoId);
-  const [form, setForm] = useState({
-    caravana: "",
-    nombre: "",
-    sexo: "",
-    raza: "",
-    categoria: "",
-    peso: "",
-    fechaNacimiento: "",
-    loteId: loteSel ?? "",
-    observaciones: "",
+  const editMode = !!animal;
+  const formInicial = () => ({
+    caravana: animal?.caravana ?? "",
+    nombre: animal?.nombre ?? "",
+    sexo: animal?.sexo ?? "",
+    raza: animal?.raza ?? "",
+    categoria: animal?.categoria ?? "",
+    peso: animal?.peso != null ? String(animal.peso) : "",
+    fechaNacimiento: animal?.fechaNacimiento ?? "",
+    loteId: animal?.loteId ?? loteSel ?? "",
+    observaciones: animal?.observaciones ?? "",
   });
+  const [form, setForm] = useState(formInicial);
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setForm(formInicial());
+      setErr(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, animal?.id]);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -204,49 +261,57 @@ function NuevoAnimalModal({
     let duplicado = false;
     update((db) => {
       const dup = db.animales.find(
-        (a) => a.campoId === campoId && a.caravana === caravana
+        (a) =>
+          a.campoId === campoId &&
+          a.caravana === caravana &&
+          a.id !== animal?.id
       );
       if (dup) {
         duplicado = true;
         return;
       }
-      db.animales.push({
-        id: uid("a_"),
-        campoId,
+      const datos = {
         loteId: form.loteId || undefined,
         caravana,
         nombre: form.nombre.trim() || undefined,
-        sexo: form.sexo === "M" || form.sexo === "H" ? (form.sexo as "M" | "H") : undefined,
+        sexo:
+          form.sexo === "M" || form.sexo === "H"
+            ? (form.sexo as "M" | "H")
+            : undefined,
         raza: form.raza.trim() || undefined,
         categoria: form.categoria.trim() || undefined,
         peso: form.peso ? Number(form.peso) : undefined,
         fechaNacimiento: form.fechaNacimiento || undefined,
         observaciones: form.observaciones.trim() || undefined,
-        alertas: [],
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      });
+      };
+      if (editMode) {
+        const a = db.animales.find((x) => x.id === animal!.id);
+        if (a) Object.assign(a, datos, { updatedAt: Date.now() });
+      } else {
+        db.animales.push({
+          id: uid("a_"),
+          campoId,
+          ...datos,
+          alertas: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
     });
     if (duplicado) {
       setErr("Ya existe un animal con esa caravana en este campo.");
       return;
     }
-    onCreate();
-    setForm({
-      caravana: "",
-      nombre: "",
-      sexo: "",
-      raza: "",
-      categoria: "",
-      peso: "",
-      fechaNacimiento: "",
-      loteId: loteSel ?? "",
-      observaciones: "",
-    });
+    onSaved();
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Nuevo animal" size="lg">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={editMode ? `Editar caravana ${animal!.caravana}` : "Nuevo animal"}
+      size="lg"
+    >
       <form onSubmit={submit} className="space-y-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <Field label="Caravana / RFID" required>
@@ -335,7 +400,9 @@ function NuevoAnimalModal({
           <button type="button" onClick={onClose} className="btn-ghost text-sm">
             Cancelar
           </button>
-          <button className="btn-primary text-sm">Guardar animal</button>
+          <button className="btn-primary text-sm">
+            {editMode ? "Guardar cambios" : "Guardar animal"}
+          </button>
         </div>
       </form>
     </Modal>
@@ -585,6 +652,67 @@ function Info({ label, value }: { label: string; value?: string | number }) {
     <div>
       <div className="label mb-0.5">{label}</div>
       <div className="text-ink">{value ?? "—"}</div>
+    </div>
+  );
+}
+
+function ExportarMenu({
+  onCSV,
+  onXLSX,
+}: {
+  onCSV: () => void;
+  onXLSX: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="btn-ghost text-sm"
+        title="Exportar lista filtrada"
+      >
+        <Download size={14} /> Exportar
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.12 }}
+            className="absolute right-0 mt-2 w-48 rounded-xl border border-line bg-bg-soft shadow-lg z-20 overflow-hidden"
+          >
+            <button
+              onClick={() => {
+                onCSV();
+                setOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-bg/60 text-left"
+            >
+              <FileText size={14} className="text-accent" /> Exportar a CSV
+            </button>
+            <button
+              onClick={() => {
+                onXLSX();
+                setOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-bg/60 text-left border-t border-line/60"
+            >
+              <FileSpreadsheet size={14} className="text-accent" /> Exportar a XLSX
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
