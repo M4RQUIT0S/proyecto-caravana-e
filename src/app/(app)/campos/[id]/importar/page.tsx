@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,10 +12,20 @@ import {
   AlertTriangle,
   Loader2,
   Plug,
+  Layers,
 } from "lucide-react";
 import { useApp } from "@/lib/context";
 import { rolEnCampo } from "@/lib/auth";
-import { importarAnimales, parseCSV, readFileAsText, type CsvRow } from "@/lib/csv";
+import {
+  importarAnimales,
+  parseCSV,
+  parseFile,
+  nombreBaseSinExtension,
+  sugerirLote,
+  crearLoteParaImport,
+  type CsvRow,
+  type SugerenciaLote,
+} from "@/lib/csv";
 import {
   bluetoothDisponible,
   conectarLectorRFID,
@@ -25,19 +35,23 @@ import {
 
 type Tab = "archivo" | "drive" | "bluetooth";
 
+interface PreviewState {
+  rows: CsvRow[];
+  baseNombre: string;
+}
+
 export default function ImportarPage() {
   const { id } = useParams<{ id: string }>();
-  const { db, user, refresh } = useApp();
+  const { user, refresh } = useApp();
   const rol = rolEnCampo(user!.id, id);
   const puedeEditar = rol === "admin" || rol === "usuario";
-  const lotes = db.lotes.filter((l) => l.campoId === id);
   const [tab, setTab] = useState<Tab>("archivo");
-  const [loteId, setLoteId] = useState<string>("");
-  const [preview, setPreview] = useState<CsvRow[] | null>(null);
+  const [preview, setPreview] = useState<PreviewState | null>(null);
   const [resultado, setResultado] = useState<{
     agregados: number;
     actualizados: number;
     omitidos: number;
+    loteNombre: string;
   } | null>(null);
 
   if (!puedeEditar) {
@@ -49,9 +63,10 @@ export default function ImportarPage() {
     );
   }
 
-  function aplicar(rows: CsvRow[]) {
-    const r = importarAnimales(id, rows, { loteId: loteId || undefined });
-    setResultado(r);
+  function aplicar(rows: CsvRow[], datosLote: SugerenciaLote) {
+    const lote = crearLoteParaImport(id, datosLote);
+    const r = importarAnimales(id, rows, { loteId: lote.id });
+    setResultado({ ...r, loteNombre: lote.nombre });
     setPreview(null);
     refresh();
   }
@@ -59,41 +74,27 @@ export default function ImportarPage() {
   return (
     <div className="space-y-6">
       <div className="card p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex-1">
-            <h3 className="font-display text-xl text-ink">Importar animales</h3>
-            <p className="text-sm text-ink-muted mt-1">
-              Las columnas reconocidas son:{" "}
-              <code className="font-mono text-accent">caravana</code> (o{" "}
-              <code className="font-mono text-accent">rfid</code> /{" "}
-              <code className="font-mono text-accent">eid</code> /{" "}
-              <code className="font-mono text-accent">id</code>),{" "}
-              <code className="font-mono">nombre</code>,{" "}
-              <code className="font-mono">sexo</code> (M/H),{" "}
-              <code className="font-mono">raza</code>,{" "}
-              <code className="font-mono">categoria</code>,{" "}
-              <code className="font-mono">peso</code> (o{" "}
-              <code className="font-mono">weight</code>),{" "}
-              <code className="font-mono">fecha_nacimiento</code>,{" "}
-              <code className="font-mono">observaciones</code>.
-            </p>
-          </div>
-          <div>
-            <label className="label block mb-1.5">Asignar a lote</label>
-            <select
-              className="input"
-              value={loteId}
-              onChange={(e) => setLoteId(e.target.value)}
-            >
-              <option value="">Sin lote</option>
-              {lotes.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <h3 className="font-display text-xl text-ink">Importar animales</h3>
+        <p className="text-sm text-ink-muted mt-1">
+          Cada archivo importado <strong className="text-ink">se carga como un lote nuevo</strong>.
+          El nombre del lote se sugiere a partir del archivo, pero podés editarlo
+          antes de confirmar.
+        </p>
+        <p className="text-sm text-ink-muted mt-2">
+          Columnas reconocidas:{" "}
+          <code className="font-mono text-accent">caravana</code> (o{" "}
+          <code className="font-mono text-accent">rfid</code> /{" "}
+          <code className="font-mono text-accent">eid</code> /{" "}
+          <code className="font-mono text-accent">id</code>),{" "}
+          <code className="font-mono">nombre</code>,{" "}
+          <code className="font-mono">sexo</code> (M/H),{" "}
+          <code className="font-mono">raza</code>,{" "}
+          <code className="font-mono">categoria</code>,{" "}
+          <code className="font-mono">peso</code> (o{" "}
+          <code className="font-mono">weight</code>),{" "}
+          <code className="font-mono">fecha_nacimiento</code>,{" "}
+          <code className="font-mono">observaciones</code>.
+        </p>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -128,9 +129,10 @@ export default function ImportarPage() {
 
       {preview && (
         <Preview
-          rows={preview}
+          rows={preview.rows}
+          baseNombre={preview.baseNombre}
           onCancel={() => setPreview(null)}
-          onConfirm={() => aplicar(preview)}
+          onConfirm={(datos) => aplicar(preview.rows, datos)}
         />
       )}
 
@@ -145,6 +147,8 @@ export default function ImportarPage() {
             <div>
               <div className="font-display text-lg text-ink">Importación lista</div>
               <div className="text-sm text-ink-muted">
+                Lote creado: <strong className="text-ink">{resultado.loteNombre}</strong>
+                {" — "}
                 {resultado.agregados} agregados · {resultado.actualizados}{" "}
                 actualizados · {resultado.omitidos} omitidos
               </div>
@@ -182,7 +186,7 @@ function TabBtn({
   );
 }
 
-function ArchivoLocal({ onParsed }: { onParsed: (rows: CsvRow[]) => void }) {
+function ArchivoLocal({ onParsed }: { onParsed: (state: PreviewState) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -190,13 +194,12 @@ function ArchivoLocal({ onParsed }: { onParsed: (rows: CsvRow[]) => void }) {
   async function manejar(file: File) {
     setErr(null);
     try {
-      const text = await readFileAsText(file);
-      const rows = parseCSV(text);
+      const rows = await parseFile(file);
       if (rows.length === 0) {
         setErr("No se detectaron filas en el archivo.");
         return;
       }
-      onParsed(rows);
+      onParsed({ rows, baseNombre: nombreBaseSinExtension(file.name) });
     } catch (e: any) {
       setErr(e.message ?? "Error leyendo el archivo.");
     }
@@ -220,14 +223,15 @@ function ArchivoLocal({ onParsed }: { onParsed: (rows: CsvRow[]) => void }) {
       }`}
     >
       <FileText className="mx-auto mb-3 text-ink-dim" />
-      <div className="font-display text-xl text-ink">Arrastrá tu .csv acá</div>
+      <div className="font-display text-xl text-ink">Arrastrá tu .csv o .xlsx acá</div>
       <p className="text-sm text-ink-muted mt-1">
-        O hacé click para elegirlo desde tu equipo.
+        O hacé click para elegirlo desde tu equipo. El nombre del archivo se usará
+        como nombre del lote.
       </p>
       <input
         ref={inputRef}
         type="file"
-        accept=".csv,text/csv"
+        accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];
@@ -245,7 +249,7 @@ function ArchivoLocal({ onParsed }: { onParsed: (rows: CsvRow[]) => void }) {
   );
 }
 
-function DriveImport({ onParsed }: { onParsed: (rows: CsvRow[]) => void }) {
+function DriveImport({ onParsed }: { onParsed: (state: PreviewState) => void }) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -266,7 +270,10 @@ function DriveImport({ onParsed }: { onParsed: (rows: CsvRow[]) => void }) {
       const text = await res.text();
       const rows = parseCSV(text);
       if (rows.length === 0) throw new Error("El archivo no tiene filas.");
-      onParsed(rows);
+      const baseNombre =
+        extraerNombreContentDisposition(res.headers.get("content-disposition")) ||
+        `Lote Drive ${new Date().toLocaleDateString("es-AR")}`;
+      onParsed({ rows, baseNombre });
     } catch (e: any) {
       setErr(
         e.message ??
@@ -317,7 +324,14 @@ function normalizarDriveURL(url: string): string | null {
   return `https://drive.google.com/uc?export=download&id=${id}`;
 }
 
-function BluetoothImport({ onParsed }: { onParsed: (rows: CsvRow[]) => void }) {
+function extraerNombreContentDisposition(cd: string | null): string {
+  if (!cd) return "";
+  const m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+  if (!m) return "";
+  return nombreBaseSinExtension(decodeURIComponent(m[1]));
+}
+
+function BluetoothImport({ onParsed }: { onParsed: (state: PreviewState) => void }) {
   const [sesion, setSesion] = useState<BluetoothSesion | null>(null);
   const [buffer, setBuffer] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -353,7 +367,9 @@ function BluetoothImport({ onParsed }: { onParsed: (rows: CsvRow[]) => void }) {
       setErr("No hay datos válidos en el buffer del lector.");
       return;
     }
-    onParsed(rows);
+    const ts = new Date();
+    const baseNombre = `Lectura BT ${ts.toLocaleDateString("es-AR")} ${String(ts.getHours()).padStart(2, "0")}:${String(ts.getMinutes()).padStart(2, "0")}`;
+    onParsed({ rows, baseNombre });
   }
 
   function limpiar() {
@@ -437,26 +453,46 @@ function BluetoothImport({ onParsed }: { onParsed: (rows: CsvRow[]) => void }) {
 
 function Preview({
   rows,
+  baseNombre,
   onCancel,
   onConfirm,
 }: {
   rows: CsvRow[];
+  baseNombre: string;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (datos: SugerenciaLote) => void;
 }) {
+  const sugerencia = sugerirLote(rows, baseNombre);
+  const [nombre, setNombre] = useState(sugerencia.nombre);
+  const [categoria, setCategoria] = useState(sugerencia.categoria);
+  const [raza, setRaza] = useState(sugerencia.raza);
+
+  useEffect(() => {
+    setNombre(sugerencia.nombre);
+    setCategoria(sugerencia.categoria);
+    setRaza(sugerencia.raza);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseNombre, rows]);
+
   const cols = Array.from(
     rows.slice(0, 8).reduce((acc, r) => {
       Object.keys(r).forEach((k) => acc.add(k));
       return acc;
     }, new Set<string>())
   ).slice(0, 6);
+
+  function confirmar() {
+    if (!nombre.trim()) return;
+    onConfirm({ nombre: nombre.trim(), categoria: categoria.trim(), raza: raza.trim() });
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="card p-5"
+      className="card p-5 space-y-5"
     >
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between">
         <div>
           <div className="font-display text-lg text-ink">Vista previa</div>
           <div className="text-xs text-ink-muted">
@@ -468,11 +504,58 @@ function Preview({
           <button onClick={onCancel} className="btn-ghost text-sm">
             Cancelar
           </button>
-          <button onClick={onConfirm} className="btn-primary text-sm">
-            Importar
+          <button
+            onClick={confirmar}
+            disabled={!nombre.trim()}
+            className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Crear lote e importar
           </button>
         </div>
       </div>
+
+      <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Layers size={15} className="text-accent" />
+          <div className="font-display text-sm text-ink">Lote nuevo a crear</div>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-3">
+          <div>
+            <label className="label block mb-1.5">
+              Nombre del lote <span className="text-accent">*</span>
+            </label>
+            <input
+              className="input"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="ej: Vacas Angus 2026"
+            />
+          </div>
+          <div>
+            <label className="label block mb-1.5">Categoría</label>
+            <input
+              className="input"
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value)}
+              placeholder="Vacas, Vaquillonas…"
+            />
+          </div>
+          <div>
+            <label className="label block mb-1.5">Raza</label>
+            <input
+              className="input"
+              value={raza}
+              onChange={(e) => setRaza(e.target.value)}
+              placeholder="Angus, Hereford…"
+            />
+          </div>
+        </div>
+        <p className="text-[11px] text-ink-dim mt-3">
+          Si ya existe un lote con este nombre, se le sumará un sufijo automático
+          ({"“"}({"2"}){"”"}, {"“"}({"3"}){"”"}…) para mantenerlos separados.
+        </p>
+      </div>
+
       <div className="overflow-x-auto rounded-xl border border-line">
         <table className="w-full text-xs">
           <thead className="bg-bg-soft">
