@@ -15,6 +15,7 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
+  ArrowRightLeft,
 } from "lucide-react";
 import { useApp } from "@/lib/context";
 import { rolEnCampo } from "@/lib/auth";
@@ -36,6 +37,8 @@ export default function AnimalesPage() {
   const [open, setOpen] = useState(false);
   const [editando, setEditando] = useState<Animal | null>(null);
   const [detalle, setDetalle] = useState<Animal | null>(null);
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
+  const [destinoLote, setDestinoLote] = useState<string>("");
 
   const lotes = db.lotes.filter((l) => l.campoId === id);
   const animales = useMemo(() => {
@@ -61,6 +64,47 @@ export default function AnimalesPage() {
       db.animales = db.animales.filter((a) => a.id !== animalId);
     });
     refresh();
+  }
+
+  function toggleSeleccion(animalId: string) {
+    setSeleccion((prev) => {
+      const next = new Set(prev);
+      if (next.has(animalId)) next.delete(animalId);
+      else next.add(animalId);
+      return next;
+    });
+  }
+
+  function seleccionarTodosVisibles() {
+    const idsVisibles = animales.map((a) => a.id);
+    const todosSelec = idsVisibles.every((aid) => seleccion.has(aid));
+    setSeleccion(todosSelec ? new Set() : new Set(idsVisibles));
+  }
+
+  function moverSeleccionados() {
+    if (seleccion.size === 0) return;
+    const ids = Array.from(seleccion);
+    const nombreDestino =
+      destinoLote === "" ? "sin lote" : lotes.find((l) => l.id === destinoLote)?.nombre ?? "lote";
+    if (!confirm(`Mover ${ids.length} animal(es) a ${nombreDestino}?`)) return;
+    update((db) => {
+      const now = Date.now();
+      for (const aid of ids) {
+        const a = db.animales.find((x) => x.id === aid);
+        if (a && a.campoId === id) {
+          a.loteId = destinoLote || undefined;
+          a.updatedAt = now;
+        }
+      }
+    });
+    setSeleccion(new Set());
+    setDestinoLote("");
+    refresh();
+  }
+
+  function limpiarSeleccion() {
+    setSeleccion(new Set());
+    setDestinoLote("");
   }
 
   return (
@@ -101,6 +145,45 @@ export default function AnimalesPage() {
         )}
       </div>
 
+      <AnimatePresence>
+        {esAdmin && seleccion.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15 }}
+            className="card p-3 mb-4 flex flex-col sm:flex-row sm:items-center gap-3 border-accent/40"
+          >
+            <div className="text-sm text-ink">
+              <strong className="text-accent">{seleccion.size}</strong>{" "}
+              animal{seleccion.size === 1 ? "" : "es"} seleccionado
+              {seleccion.size === 1 ? "" : "s"}
+            </div>
+            <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
+              <label className="label text-xs sm:mr-1">Mover a lote:</label>
+              <select
+                className="input sm:max-w-[220px]"
+                value={destinoLote}
+                onChange={(e) => setDestinoLote(e.target.value)}
+              >
+                <option value="">Sin lote</option>
+                {lotes.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.nombre}
+                  </option>
+                ))}
+              </select>
+              <button onClick={moverSeleccionados} className="btn-primary text-sm">
+                <ArrowRightLeft size={14} /> Mover
+              </button>
+              <button onClick={limpiarSeleccion} className="btn-ghost text-sm">
+                Cancelar
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {animales.length === 0 ? (
         <div className="card p-10 text-center text-ink-muted">
           <Tags className="mx-auto mb-3 text-ink-dim" />
@@ -108,7 +191,27 @@ export default function AnimalesPage() {
         </div>
       ) : (
         <div className="card overflow-hidden">
-          <div className="hidden md:grid grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_0.8fr_0.6fr_auto] gap-3 px-5 py-3 border-b border-line text-xs uppercase tracking-wider text-ink-dim">
+          <div
+            className={`hidden md:grid ${
+              esAdmin
+                ? "grid-cols-[36px_1.2fr_1.2fr_0.8fr_0.8fr_0.8fr_0.6fr_auto]"
+                : "grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_0.8fr_0.6fr_auto]"
+            } gap-3 px-5 py-3 border-b border-line text-xs uppercase tracking-wider text-ink-dim`}
+          >
+            {esAdmin && (
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={
+                    animales.length > 0 &&
+                    animales.every((a) => seleccion.has(a.id))
+                  }
+                  onChange={seleccionarTodosVisibles}
+                  className="accent-accent cursor-pointer"
+                  title="Seleccionar todos los visibles"
+                />
+              </div>
+            )}
             <div>Caravana</div>
             <div>Nombre</div>
             <div>Categoría</div>
@@ -121,15 +224,32 @@ export default function AnimalesPage() {
             {animales.map((a, idx) => {
               const lote = db.lotes.find((l) => l.id === a.loteId);
               const activas = a.alertas.filter((x) => !x.resuelta).length;
+              const seleccionado = seleccion.has(a.id);
               return (
                 <motion.li
                   key={a.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: idx * 0.015 }}
-                  className="grid grid-cols-2 md:grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_0.8fr_0.6fr_auto] gap-3 px-5 py-3 border-b border-line/60 last:border-0 hover:bg-bg-soft/60 transition cursor-pointer"
+                  className={`grid grid-cols-2 ${
+                    esAdmin
+                      ? "md:grid-cols-[36px_1.2fr_1.2fr_0.8fr_0.8fr_0.8fr_0.6fr_auto]"
+                      : "md:grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_0.8fr_0.6fr_auto]"
+                  } gap-3 px-5 py-3 border-b border-line/60 last:border-0 hover:bg-bg-soft/60 transition cursor-pointer ${
+                    seleccionado ? "bg-accent/5" : ""
+                  }`}
                   onClick={() => setDetalle(a)}
                 >
+                  {esAdmin && (
+                    <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={seleccionado}
+                        onChange={() => toggleSeleccion(a.id)}
+                        className="accent-accent cursor-pointer"
+                      />
+                    </div>
+                  )}
                   <div className="font-mono text-accent">{a.caravana}</div>
                   <div className="text-ink">{a.nombre || "—"}</div>
                   <div className="text-ink-muted">{a.categoria || "—"}</div>
@@ -286,7 +406,10 @@ function AnimalFormModal({
       };
       if (editMode) {
         const a = db.animales.find((x) => x.id === animal!.id);
-        if (a) Object.assign(a, datos, { updatedAt: Date.now() });
+        if (a) {
+          const { caravana: _ignorada, ...editables } = datos;
+          Object.assign(a, editables, { updatedAt: Date.now() });
+        }
       } else {
         db.animales.push({
           id: uid("a_"),
@@ -314,14 +437,21 @@ function AnimalFormModal({
     >
       <form onSubmit={submit} className="space-y-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <Field label="Caravana / RFID" required>
+          <Field label="Caravana / EID" required>
             <input
-              autoFocus
-              className="input"
+              autoFocus={!editMode}
+              readOnly={editMode}
+              className={`input ${editMode ? "opacity-60 cursor-not-allowed" : ""}`}
               value={form.caravana}
               onChange={(e) => setForm({ ...form, caravana: e.target.value })}
               placeholder="982000123…"
+              title={editMode ? "La caravana es el ID físico del animal y no se puede modificar." : undefined}
             />
+            {editMode && (
+              <div className="text-[11px] text-ink-dim mt-1">
+                La caravana identifica físicamente al animal y no se puede cambiar.
+              </div>
+            )}
           </Field>
           <Field label="Nombre">
             <input
