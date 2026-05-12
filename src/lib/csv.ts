@@ -7,6 +7,7 @@ import { loadDB, saveDB, uid } from "./storage";
 export interface CsvRow {
   caravana?: string;
   rfid?: string;
+  eid?: string;
   id?: string;
   nombre?: string;
   sexo?: string;
@@ -14,6 +15,7 @@ export interface CsvRow {
   categoria?: string;
   fecha_nacimiento?: string;
   peso?: string | number;
+  weight?: string | number;
   observaciones?: string;
   lote?: string;
   [key: string]: any;
@@ -54,7 +56,7 @@ export function importarAnimales(
   let omitidos = 0;
   const now = Date.now();
   for (const row of rows) {
-    const caravana = String(row.caravana ?? row.rfid ?? row.id ?? "").trim();
+    const caravana = String(row.caravana ?? row.rfid ?? row.eid ?? row.id ?? "").trim();
     if (!caravana) {
       omitidos++;
       continue;
@@ -69,7 +71,12 @@ export function importarAnimales(
       raza: row.raza ? String(row.raza) : undefined,
       categoria: row.categoria ? String(row.categoria) : undefined,
       fechaNacimiento: row.fecha_nacimiento ? String(row.fecha_nacimiento) : undefined,
-      peso: row.peso != null && row.peso !== "" ? Number(row.peso) : undefined,
+      peso:
+        row.peso != null && row.peso !== ""
+          ? Number(row.peso)
+          : row.weight != null && row.weight !== ""
+          ? Number(row.weight)
+          : undefined,
       observaciones: row.observaciones ? String(row.observaciones) : undefined,
       loteId: opts.loteId,
     };

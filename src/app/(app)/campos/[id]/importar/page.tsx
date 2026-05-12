@@ -66,12 +66,14 @@ export default function ImportarPage() {
               Las columnas reconocidas son:{" "}
               <code className="font-mono text-accent">caravana</code> (o{" "}
               <code className="font-mono text-accent">rfid</code> /{" "}
+              <code className="font-mono text-accent">eid</code> /{" "}
               <code className="font-mono text-accent">id</code>),{" "}
               <code className="font-mono">nombre</code>,{" "}
               <code className="font-mono">sexo</code> (M/H),{" "}
               <code className="font-mono">raza</code>,{" "}
               <code className="font-mono">categoria</code>,{" "}
-              <code className="font-mono">peso</code>,{" "}
+              <code className="font-mono">peso</code> (o{" "}
+              <code className="font-mono">weight</code>),{" "}
               <code className="font-mono">fecha_nacimiento</code>,{" "}
               <code className="font-mono">observaciones</code>.
             </p>
