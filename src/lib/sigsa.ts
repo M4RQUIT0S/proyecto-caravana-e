@@ -2,10 +2,11 @@
 
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import type { Animal, Lote } from "./types";
+import type { Animal, AfipCredenciales, Lote } from "./types";
 import { update } from "./storage";
 
 export interface SigsaRow {
+  acta: string;
   caravana: string;
   sexo: string;
   raza: string;
@@ -44,8 +45,9 @@ export function totalPendientes(animales: Animal[]): number {
   return animales.filter((a) => !a.sigsa).length;
 }
 
-function animalesARowsSigsa(animales: Animal[]): SigsaRow[] {
+function animalesARowsSigsa(animales: Animal[], acta: string): SigsaRow[] {
   return animales.map((a) => ({
+    acta,
     caravana: a.caravana,
     sexo: a.sexo === "M" ? "Macho" : a.sexo === "H" ? "Hembra" : "",
     raza: a.raza ?? "",
@@ -81,15 +83,23 @@ function nombreArchivoSigsa(loteNombre: string, ext: string): string {
   return `sigsa-${slug}-${ts}.${ext}`;
 }
 
-export function exportarPendientesCSV(animales: Animal[], loteNombre: string) {
-  const rows = animalesARowsSigsa(animales);
+export function exportarPendientesCSV(
+  animales: Animal[],
+  loteNombre: string,
+  acta: string
+) {
+  const rows = animalesARowsSigsa(animales, acta);
   const csv = Papa.unparse(rows);
   const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8;" });
   descargarBlob(blob, nombreArchivoSigsa(loteNombre, "csv"));
 }
 
-export function exportarPendientesXLSX(animales: Animal[], loteNombre: string) {
-  const rows = animalesARowsSigsa(animales);
+export function exportarPendientesXLSX(
+  animales: Animal[],
+  loteNombre: string,
+  acta: string
+) {
+  const rows = animalesARowsSigsa(animales, acta);
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "SIGSA");
@@ -107,11 +117,13 @@ export interface MarcadoResultado {
 
 export function marcarComoDeclarados(
   animalIds: string[],
-  declaradoPor: string
+  declaradoPor: string,
+  acta?: string
 ): MarcadoResultado {
   let marcados = 0;
   let yaDeclarados = 0;
   const now = Date.now();
+  const actaLimpia = acta?.trim() || undefined;
   update((db) => {
     for (const id of animalIds) {
       const a = db.animales.find((x) => x.id === id);
@@ -120,12 +132,52 @@ export function marcarComoDeclarados(
         yaDeclarados++;
         continue;
       }
-      a.sigsa = { declaradoAt: now, declaradoPor };
+      a.sigsa = { declaradoAt: now, declaradoPor, acta: actaLimpia };
       a.updatedAt = now;
       marcados++;
     }
   });
   return { marcados, yaDeclarados };
+}
+
+export function guardarCredencialesAfip(
+  campoId: string,
+  cuit: string,
+  clave: string
+) {
+  const limpio = cuit.replace(/\D/g, "");
+  update((db) => {
+    const c = db.campos.find((x) => x.id === campoId);
+    if (!c) return;
+    c.afip = { cuit: limpio, clave, guardadoAt: Date.now() };
+  });
+}
+
+export function borrarCredencialesAfip(campoId: string) {
+  update((db) => {
+    const c = db.campos.find((x) => x.id === campoId);
+    if (!c) return;
+    c.afip = undefined;
+  });
+}
+
+export function obtenerCredencialesAfip(campoId: string): AfipCredenciales | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const raw = window.localStorage.getItem("caravanas:v1");
+    if (!raw) return undefined;
+    const db = JSON.parse(raw);
+    const c = db.campos?.find((x: { id: string }) => x.id === campoId);
+    return c?.afip;
+  } catch {
+    return undefined;
+  }
+}
+
+export function formatCuit(cuit: string): string {
+  const d = cuit.replace(/\D/g, "");
+  if (d.length !== 11) return cuit;
+  return `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}`;
 }
 
 export function deshacerDeclaracion(animalIds: string[]): number {

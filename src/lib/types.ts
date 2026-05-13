@@ -21,6 +21,7 @@ export interface Campo {
   codigo: string; // código de acceso por invitación
   ownerId: string;
   miembros: MiembroCampo[];
+  afip?: AfipCredenciales; // credenciales para el bot SIGSA (sólo localStorage)
   createdAt: number;
 }
 
@@ -48,6 +49,13 @@ export interface Alerta {
 export interface DeclaracionSigsa {
   declaradoAt: number;
   declaradoPor: string; // userId
+  acta?: string; // número de acta de vacunación
+}
+
+export interface AfipCredenciales {
+  cuit: string; // sólo dígitos (11)
+  clave: string;
+  guardadoAt: number;
 }
 
 export interface Animal {
