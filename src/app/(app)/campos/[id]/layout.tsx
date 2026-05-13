@@ -10,6 +10,7 @@ import {
   Users,
   Upload,
   Tags,
+  Bot,
 } from "lucide-react";
 import { useApp } from "@/lib/context";
 import { RoleBadge } from "@/components/RoleBadge";
@@ -20,6 +21,7 @@ const tabs = [
   { href: "/animales", label: "Animales", icon: Tags },
   { href: "/usuarios", label: "Usuarios", icon: Users },
   { href: "/importar", label: "Importar", icon: Upload },
+  { href: "/sigsa", label: "Bot SIGSA", icon: Bot },
 ];
 
 export default function CampoLayout({ children }: { children: React.ReactNode }) {

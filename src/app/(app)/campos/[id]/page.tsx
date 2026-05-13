@@ -4,8 +4,9 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Layers, Tags, Users, BellRing, Copy } from "lucide-react";
+import { Layers, Tags, Users, BellRing, Copy, Bot } from "lucide-react";
 import { useApp } from "@/lib/context";
+import { totalPendientes } from "@/lib/sigsa";
 
 export default function CampoResumen() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +22,7 @@ export default function CampoResumen() {
       ),
     [animales]
   );
+  const sigsaPendientes = useMemo(() => totalPendientes(animales), [animales]);
   const miembros = campo.miembros.length + 1;
 
   const rangos = useMemo(() => {
@@ -39,11 +41,18 @@ export default function CampoResumen() {
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <Stat icon={Layers} label="Lotes" value={lotes.length} href={`/campos/${id}/lotes`} />
         <Stat icon={Tags} label="Animales" value={animales.length} href={`/campos/${id}/animales`} />
         <Stat icon={Users} label="Miembros" value={miembros} href={`/campos/${id}/usuarios`} />
         <Stat icon={BellRing} label="Alertas activas" value={alertasActivas} accent />
+        <Stat
+          icon={Bot}
+          label="Pendientes SIGSA"
+          value={sigsaPendientes}
+          href={`/campos/${id}/sigsa`}
+          accent={sigsaPendientes > 0}
+        />
       </div>
 
       <section className="card p-5">

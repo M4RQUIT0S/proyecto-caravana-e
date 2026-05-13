@@ -45,6 +45,11 @@ export interface Alerta {
   resuelta?: boolean;
 }
 
+export interface DeclaracionSigsa {
+  declaradoAt: number;
+  declaradoPor: string; // userId
+}
+
 export interface Animal {
   id: string;
   campoId: string;
@@ -58,6 +63,7 @@ export interface Animal {
   peso?: number;
   observaciones?: string;
   alertas: Alerta[];
+  sigsa?: DeclaracionSigsa;
   createdAt: number;
   updatedAt: number;
 }
