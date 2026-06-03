@@ -1,10 +1,15 @@
 "use client";
 
 import type { Rol } from "@/lib/types";
-import { Shield, UserCog, Eye } from "lucide-react";
+import { Shield, UserCog, Eye, HardHat } from "lucide-react";
 
 const map: Record<Rol, { label: string; color: string; Icon: any }> = {
-  admin: { label: "Admin", color: "text-accent border-accent/40 bg-accent/10", Icon: Shield },
+  admin: { label: "Productor", color: "text-accent border-accent/40 bg-accent/10", Icon: Shield },
+  operador: {
+    label: "Operador delegado",
+    color: "text-amber-300 border-amber-300/30 bg-amber-300/10",
+    Icon: HardHat,
+  },
   usuario: {
     label: "Usuario",
     color: "text-sky-300 border-sky-300/30 bg-sky-300/10",

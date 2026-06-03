@@ -9,9 +9,19 @@ import { rolEnCampo } from "@/lib/auth";
 import { uid, update } from "@/lib/storage";
 import { RoleBadge } from "@/components/RoleBadge";
 import { Modal } from "@/components/Modal";
-import type { Rol } from "@/lib/types";
+import { PERMISOS_OPERADOR_DEFAULT, ROL_LABEL } from "@/lib/permisos";
+import type { PermisosOperador, Rol } from "@/lib/types";
 
-const roles: Rol[] = ["admin", "usuario", "vista"];
+const roles: Rol[] = ["admin", "operador", "usuario", "vista"];
+
+const PERMISO_LABEL: { key: keyof PermisosOperador; label: string }[] = [
+  { key: "capturar", label: "Capturar en manga" },
+  { key: "sanidad", label: "Registrar sanidad" },
+  { key: "pesaje", label: "Registrar pesaje" },
+  { key: "movimiento", label: "Registrar movimientos" },
+];
+
+const DENEGADAS_LABEL = ["Ver costos", "Reportes", "Sincronizar SENASA", "Administrar"];
 
 export default function UsuariosPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,16 +43,42 @@ export default function UsuariosPage() {
     update((db) => {
       const c = db.campos.find((c) => c.id === id);
       const m = c?.miembros.find((m) => m.userId === userId);
-      if (m) m.rol = nuevo;
+      if (m) {
+        m.rol = nuevo;
+        // Al pasar a Operador delegado, se inicializan permisos acotados (RN21).
+        if (nuevo === "operador" && !m.permisos) m.permisos = { ...PERMISOS_OPERADOR_DEFAULT };
+      }
+    });
+    refresh();
+  }
+
+  function setPermiso(userId: string, key: keyof PermisosOperador, value: boolean) {
+    update((db) => {
+      const c = db.campos.find((c) => c.id === id);
+      const m = c?.miembros.find((m) => m.userId === userId);
+      if (m) {
+        m.permisos = { ...PERMISOS_OPERADOR_DEFAULT, ...(m.permisos ?? {}), [key]: value };
+      }
     });
     refresh();
   }
 
   function quitar(userId: string) {
-    if (!confirm("¿Quitar este miembro del campo?")) return;
+    // Baja lógica (RN07): el miembro queda inactivo pero conserva trazabilidad.
+    if (!confirm("¿Dar de baja a este miembro? Queda inactivo (baja lógica, RN07).")) return;
     update((db) => {
       const c = db.campos.find((c) => c.id === id);
-      if (c) c.miembros = c.miembros.filter((m) => m.userId !== userId);
+      const m = c?.miembros.find((m) => m.userId === userId);
+      if (m) m.activo = false;
+    });
+    refresh();
+  }
+
+  function reactivar(userId: string) {
+    update((db) => {
+      const c = db.campos.find((c) => c.id === id);
+      const m = c?.miembros.find((m) => m.userId === userId);
+      if (m) m.activo = true;
     });
     refresh();
   }
@@ -92,10 +128,15 @@ export default function UsuariosPage() {
                 username={m.user!.username}
                 email={m.user!.email}
                 rol={m.rol}
+                permisos={m.permisos}
+                activo={m.activo !== false}
+                esAdmin={esAdmin}
                 onCambiarRol={
                   esAdmin ? (r) => cambiarRol(m.user!.id, r) : undefined
                 }
+                onSetPermiso={esAdmin ? (k, v) => setPermiso(m.user!.id, k, v) : undefined}
                 onQuitar={esAdmin ? () => quitar(m.user!.id) : undefined}
+                onReactivar={esAdmin ? () => reactivar(m.user!.id) : undefined}
               />
             </motion.div>
           ))}
@@ -159,51 +200,91 @@ function Miembro({
   email,
   rol,
   tag,
+  permisos,
+  activo = true,
+  esAdmin,
   onCambiarRol,
+  onSetPermiso,
   onQuitar,
+  onReactivar,
 }: {
   username: string;
   email: string;
   rol: Rol;
   tag?: string;
+  permisos?: PermisosOperador;
+  activo?: boolean;
+  esAdmin?: boolean;
   onCambiarRol?: (r: Rol) => void;
+  onSetPermiso?: (k: keyof PermisosOperador, v: boolean) => void;
   onQuitar?: () => void;
+  onReactivar?: () => void;
 }) {
+  const efectivos = { ...PERMISOS_OPERADOR_DEFAULT, ...(permisos ?? {}) };
   return (
-    <li className="px-5 py-3 border-b border-line/60 last:border-0 flex items-center justify-between gap-3">
-      <div>
-        <div className="text-ink text-sm flex items-center gap-2">
-          {username}
-          {tag && <span className="chip text-[10px]">{tag}</span>}
+    <li className={`px-5 py-3 border-b border-line/60 last:border-0 ${!activo ? "opacity-50" : ""}`}>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-ink text-sm flex items-center gap-2">
+            {username}
+            {tag && <span className="chip text-[10px]">{tag}</span>}
+            {!activo && <span className="chip text-[10px] text-red-300">inactivo</span>}
+          </div>
+          <div className="text-xs text-ink-dim">{email}</div>
         </div>
-        <div className="text-xs text-ink-dim">{email}</div>
+        <div className="flex items-center gap-2">
+          {onCambiarRol ? (
+            <select
+              value={rol}
+              onChange={(e) => onCambiarRol(e.target.value as Rol)}
+              className="rounded-lg bg-bg-soft border border-line px-2 py-1 text-xs text-ink"
+            >
+              {roles.map((r) => (
+                <option key={r} value={r}>
+                  {ROL_LABEL[r]}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <RoleBadge rol={rol} />
+          )}
+          {activo && onQuitar && (
+            <button onClick={onQuitar} className="text-ink-dim hover:text-red-300" title="Dar de baja (RN07)">
+              <Trash2 size={15} />
+            </button>
+          )}
+          {!activo && onReactivar && (
+            <button onClick={onReactivar} className="text-ink-dim hover:text-emerald-300 text-xs">
+              Reactivar
+            </button>
+          )}
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        {onCambiarRol ? (
-          <select
-            value={rol}
-            onChange={(e) => onCambiarRol(e.target.value as Rol)}
-            className="rounded-lg bg-bg-soft border border-line px-2 py-1 text-xs text-ink"
-          >
-            {roles.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
+
+      {rol === "operador" && activo && (
+        <div className="mt-3 rounded-xl border border-line bg-bg-soft/40 p-3">
+          <div className="text-[11px] uppercase tracking-wide text-ink-dim mb-2">
+            Permisos del Operador delegado (RF-12)
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {PERMISO_LABEL.map(({ key, label }) => (
+              <label key={key} className="flex items-center gap-1.5 text-xs text-ink">
+                <input
+                  type="checkbox"
+                  className="accent-accent"
+                  checked={efectivos[key]}
+                  disabled={!esAdmin || !onSetPermiso}
+                  onChange={(e) => onSetPermiso?.(key, e.target.checked)}
+                />
+                {label}
+              </label>
             ))}
-          </select>
-        ) : (
-          <RoleBadge rol={rol} />
-        )}
-        {onQuitar && (
-          <button
-            onClick={onQuitar}
-            className="text-ink-dim hover:text-red-300"
-            title="Quitar"
-          >
-            <Trash2 size={15} />
-          </button>
-        )}
-      </div>
+          </div>
+          <div className="mt-2 text-[11px] text-ink-dim">
+            Denegado siempre: {DENEGADAS_LABEL.join(" · ")} (RN21 / RU09).
+          </div>
+        </div>
+      )}
     </li>
   );
 }
@@ -283,27 +364,28 @@ function InvitarModal({
         </div>
         <div>
           <label className="label block mb-1.5">Rol</label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {roles.map((r) => (
               <button
                 type="button"
                 key={r}
                 onClick={() => setRol(r)}
-                className={`rounded-xl border px-3 py-2 text-sm capitalize transition ${
+                className={`rounded-xl border px-3 py-2 text-sm transition ${
                   rol === r
                     ? "border-accent bg-accent/10 text-ink"
                     : "border-line text-ink-muted hover:text-ink"
                 }`}
               >
-                {r}
+                {ROL_LABEL[r]}
               </button>
             ))}
           </div>
           <p className="text-xs text-ink-dim mt-2">
-            <strong className="text-ink-muted">Admin</strong>: control total ·{" "}
-            <strong className="text-ink-muted">Usuario</strong>: agrega animales y
-            alertas · <strong className="text-ink-muted">Vista</strong>: sólo
-            lectura.
+            <strong className="text-ink-muted">Productor</strong>: control total ·{" "}
+            <strong className="text-ink-muted">Operador delegado</strong>: captura en manga con
+            permisos acotados (sin costos, reportes ni SENASA) ·{" "}
+            <strong className="text-ink-muted">Usuario</strong>: opera y consulta ·{" "}
+            <strong className="text-ink-muted">Sólo lectura</strong>: consulta.
           </p>
         </div>
         {err && <div className="text-sm text-red-300">{err}</div>}

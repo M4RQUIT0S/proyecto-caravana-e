@@ -4,16 +4,27 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Layers, Tags, Users, BellRing, Copy, Bot } from "lucide-react";
+import { Layers, Tags, Users, BellRing, Copy, Bot, Clock, RefreshCw, TrendingUp } from "lucide-react";
 import { useApp } from "@/lib/context";
 import { totalPendientes } from "@/lib/sigsa";
+import { contarPendientes, esActivo, estaEnCarencia } from "@/lib/reglas";
+import { resumenRentabilidad } from "@/lib/reportes";
 
 export default function CampoResumen() {
   const { id } = useParams<{ id: string }>();
   const { db } = useApp();
   const campo = db.campos.find((c) => c.id === id)!;
   const lotes = db.lotes.filter((l) => l.campoId === id);
-  const animales = db.animales.filter((a) => a.campoId === id);
+  const animales = db.animales.filter((a) => a.campoId === id && esActivo(a));
+  const enCarencia = useMemo(() => animales.filter((a) => estaEnCarencia(a)).length, [animales]);
+  const enCola = useMemo(
+    () => contarPendientes(db.eventos.filter((e) => e.campoId === id)),
+    [db.eventos, id]
+  );
+  const adpvProm = useMemo(
+    () => resumenRentabilidad(id, db).adpvPromedio,
+    [db, id]
+  );
   const alertasActivas = useMemo(
     () =>
       animales.reduce(
@@ -41,11 +52,31 @@ export default function CampoResumen() {
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <Stat icon={Layers} label="Lotes" value={lotes.length} href={`/campos/${id}/lotes`} />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         <Stat icon={Tags} label="Animales" value={animales.length} href={`/campos/${id}/animales`} />
+        <Stat icon={Layers} label="Lotes" value={lotes.length} href={`/campos/${id}/lotes`} />
+        <Stat
+          icon={Clock}
+          label="En carencia"
+          value={enCarencia}
+          href={`/campos/${id}/animales`}
+          accent={enCarencia > 0}
+        />
+        <Stat
+          icon={RefreshCw}
+          label="En cola (sync)"
+          value={enCola}
+          href={`/campos/${id}/senasa`}
+          accent={enCola > 0}
+        />
+        <Stat
+          icon={TrendingUp}
+          label="ADPV promedio"
+          value={adpvProm != null ? adpvProm : 0}
+          href={`/campos/${id}/reportes`}
+        />
         <Stat icon={Users} label="Miembros" value={miembros} href={`/campos/${id}/usuarios`} />
-        <Stat icon={BellRing} label="Alertas activas" value={alertasActivas} accent />
+        <Stat icon={BellRing} label="Alertas activas" value={alertasActivas} accent={alertasActivas > 0} />
         <Stat
           icon={Bot}
           label="Pendientes SIGSA"
