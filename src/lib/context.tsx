@@ -48,15 +48,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const sb = supabase();
+    let montado = true;
+
+    // Hidratación inicial garantizada: en cada montaje (incluida una recarga de página de
+    // una ruta protegida) bajamos los datos y soltamos el estado de carga. Tomamos la sesión
+    // con getSession() ACÁ (fuera del callback de auth, donde sería seguro).
+    (async () => {
+      try {
+        const {
+          data: { session },
+        } = await sb.auth.getSession();
+        await hydrate(session);
+      } catch (e) {
+        console.error("[supabase] hydrate inicial:", e);
+      }
+      if (montado) {
+        refresh();
+        setLoading(false);
+      }
+    })();
+
+    // Cambios posteriores de sesión. El callback NO debe llamar métodos de sb.auth
+    // (deadlock del navigator lock): usamos la `session` que recibe como parámetro.
     const {
       data: { subscription },
-    } = sb.auth.onAuthStateChange(async (event) => {
+    } = sb.auth.onAuthStateChange((event, session) => {
       if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") return;
-      await hydrate();
-      refresh();
-      setLoading(false);
+      hydrate(session)
+        .catch((e) => console.error("[supabase] hydrate onAuthStateChange:", e))
+        .finally(() => {
+          if (montado) {
+            refresh();
+            setLoading(false);
+          }
+        });
     });
-    return () => subscription.unsubscribe();
+
+    return () => {
+      montado = false;
+      subscription.unsubscribe();
+    };
   }, [refresh]);
 
   const user = useMemo(
