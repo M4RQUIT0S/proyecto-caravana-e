@@ -66,6 +66,20 @@ main {
   @apply w-full rounded-xl bg-bg-soft border border-line px-4 py-2.5 text-ink placeholder:text-ink-dim focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/20 transition;
 }
 
+/* Selects: quitar la flecha nativa (que en Windows se ve blanca al abrir) y poner una
+   chevron propia + opciones del desplegable en oscuro. */
+select.input {
+  @apply appearance-none bg-no-repeat pr-10;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239fb27f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-position: right 0.7rem center;
+  background-size: 1.05rem;
+}
+select.input option,
+select.input optgroup {
+  background-color: #161a13;
+  color: #e9efe2;
+}
+
 .btn {
   @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-medium transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
 }
