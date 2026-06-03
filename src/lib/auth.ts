@@ -1,76 +1,105 @@
 "use client";
 
-import { loadDB, saveDB, uid, update } from "./storage";
+import { loadDB, saveDB } from "./storage";
+import { supabase, supabaseConfigurado } from "./supabase/client";
+import { hydrate } from "./supabase/sync";
 import type { Rol, Usuario } from "./types";
 
-// Hash simple (sólo para demo client-side). En producción usar backend real.
-async function hash(text: string): Promise<string> {
-  if (typeof window === "undefined" || !window.crypto?.subtle) {
-    return btoa(unescape(encodeURIComponent(text)));
-  }
-  const data = new TextEncoder().encode(text);
-  const buf = await window.crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(buf))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+type AuthResult = { ok: true; user: Usuario } | { ok: false; error: string };
+
+function traducir(msg: string): string {
+  const m = msg.toLowerCase();
+  if (m.includes("invalid login")) return "Email o contraseña incorrectos.";
+  if (m.includes("already registered") || m.includes("already been registered"))
+    return "Ya existe una cuenta con ese correo.";
+  if (m.includes("password")) return "La contraseña no cumple los requisitos (mínimo 6 caracteres).";
+  if (m.includes("email")) return "El correo no es válido.";
+  return msg;
 }
 
 export async function registrar(input: {
   email: string;
   username: string;
   password: string;
-}): Promise<{ ok: true; user: Usuario } | { ok: false; error: string }> {
-  const db = loadDB();
+}): Promise<AuthResult> {
+  if (!supabaseConfigurado())
+    return { ok: false, error: "Falta configurar Supabase (variables de entorno)." };
+
   const email = input.email.trim().toLowerCase();
   const username = input.username.trim();
-  if (!email || !username || !input.password) {
+  if (!email || !username || !input.password)
     return { ok: false, error: "Completá todos los campos." };
-  }
-  if (input.password.length < 6) {
+  if (input.password.length < 6)
     return { ok: false, error: "La contraseña debe tener al menos 6 caracteres." };
-  }
-  if (db.usuarios.some((u) => u.email === email)) {
-    return { ok: false, error: "Ya existe una cuenta con ese correo." };
-  }
-  if (db.usuarios.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
-    return { ok: false, error: "Ese nombre de usuario ya está tomado." };
-  }
-  const user: Usuario = {
-    id: uid("u_"),
+
+  const sb = supabase();
+
+  // Username único (la columna profiles.username es unique; chequeamos antes para un mensaje claro).
+  const { data: existente } = await sb
+    .from("profiles")
+    .select("id")
+    .ilike("username", username)
+    .maybeSingle();
+  if (existente) return { ok: false, error: "Ese nombre de usuario ya está tomado." };
+
+  const { data, error } = await sb.auth.signUp({
     email,
-    username,
-    passwordHash: await hash(input.password),
-    createdAt: Date.now(),
-  };
-  db.usuarios.push(user);
-  db.sesion = { userId: user.id };
-  saveDB(db);
-  return { ok: true, user };
-}
-
-export async function login(
-  identificador: string,
-  password: string
-): Promise<{ ok: true; user: Usuario } | { ok: false; error: string }> {
-  const db = loadDB();
-  const id = identificador.trim().toLowerCase();
-  const user = db.usuarios.find(
-    (u) => u.email === id || u.username.toLowerCase() === id
-  );
-  if (!user) return { ok: false, error: "Usuario no encontrado." };
-  const ph = await hash(password);
-  if (ph !== user.passwordHash) return { ok: false, error: "Contraseña incorrecta." };
-  db.sesion = { userId: user.id };
-  saveDB(db);
-  return { ok: true, user };
-}
-
-export function logout() {
-  update((db) => {
-    db.sesion = { userId: null };
+    password: input.password,
+    options: { data: { username } },
   });
+  if (error) return { ok: false, error: traducir(error.message) };
+
+  if (!data.session) {
+    // El proyecto tiene confirmación de email activada.
+    return {
+      ok: false,
+      error:
+        "Te enviamos un correo para confirmar la cuenta. Confirmala y luego iniciá sesión. " +
+        "(Para registro inmediato, desactivá 'Confirm email' en Supabase → Auth.)",
+    };
+  }
+
+  await hydrate();
+  const user = currentUser();
+  return user ? { ok: true, user } : { ok: false, error: "No se pudo iniciar la sesión." };
 }
 
+export async function login(identificador: string, password: string): Promise<AuthResult> {
+  if (!supabaseConfigurado())
+    return { ok: false, error: "Falta configurar Supabase (variables de entorno)." };
+
+  const sb = supabase();
+  let email = identificador.trim();
+  if (!email.includes("@")) {
+    // Login por nombre de usuario: resolvemos su email vía RPC.
+    const { data } = await sb.rpc("email_for_username", { p_username: email });
+    if (!data) return { ok: false, error: "Usuario no encontrado." };
+    email = data as string;
+  }
+
+  const { error } = await sb.auth.signInWithPassword({
+    email: email.toLowerCase(),
+    password,
+  });
+  if (error) return { ok: false, error: traducir(error.message) };
+
+  await hydrate();
+  const user = currentUser();
+  return user ? { ok: true, user } : { ok: false, error: "No se pudo iniciar la sesión." };
+}
+
+export async function logout() {
+  if (supabaseConfigurado()) {
+    try {
+      await supabase().auth.signOut();
+    } catch {}
+  }
+  const db = loadDB();
+  db.sesion = { userId: null };
+  saveDB(db);
+}
+
+// Lee del caché local (hidratado desde Supabase). Sincrónico para no tocar el resto de la app.
 export function currentUser(): Usuario | null {
   const db = loadDB();
   if (!db.sesion.userId) return null;

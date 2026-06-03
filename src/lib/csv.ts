@@ -3,7 +3,7 @@
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import type { Animal, Lote } from "./types";
-import { loadDB, saveDB, uid } from "./storage";
+import { loadDB, uid, update } from "./storage";
 
 export interface CsvRow {
   caravana?: string;
@@ -134,9 +134,9 @@ export function crearLoteParaImport(
     raza: data.raza.trim(),
     createdAt: Date.now(),
   };
-  const db = loadDB();
-  db.lotes.push(lote);
-  saveDB(db);
+  update((db) => {
+    db.lotes.push(lote);
+  });
   return lote;
 }
 
@@ -151,53 +151,56 @@ export function importarAnimales(
   rows: CsvRow[],
   opts: { loteId?: string } = {}
 ): ImportResult {
-  const db = loadDB();
   let agregados = 0;
   let actualizados = 0;
   let omitidos = 0;
   const now = Date.now();
-  for (const row of rows) {
-    const caravana = String(row.caravana ?? row.rfid ?? row.eid ?? row.id ?? "").trim();
-    if (!caravana) {
-      omitidos++;
-      continue;
-    }
-    const existente = db.animales.find(
-      (a) => a.campoId === campoId && a.caravana === caravana
-    );
-    const datos: Partial<Animal> = {
-      caravana,
-      nombre: row.nombre ? String(row.nombre) : undefined,
-      sexo: row.sexo === "M" || row.sexo === "H" ? row.sexo : undefined,
-      raza: row.raza ? String(row.raza) : undefined,
-      categoria: row.categoria ? String(row.categoria) : undefined,
-      fechaNacimiento: row.fecha_nacimiento ? String(row.fecha_nacimiento) : undefined,
-      peso:
-        row.peso != null && row.peso !== ""
-          ? Number(row.peso)
-          : row.weight != null && row.weight !== ""
-          ? Number(row.weight)
-          : undefined,
-      observaciones: row.observaciones ? String(row.observaciones) : undefined,
-      loteId: opts.loteId,
-    };
-    if (existente) {
-      Object.assign(existente, datos, { updatedAt: now });
-      actualizados++;
-    } else {
-      db.animales.push({
-        id: uid("a_"),
-        campoId,
-        loteId: opts.loteId,
+  update((db) => {
+    for (const row of rows) {
+      const caravana = String(row.caravana ?? row.rfid ?? row.eid ?? row.id ?? "").trim();
+      if (!caravana) {
+        omitidos++;
+        continue;
+      }
+      const existente = db.animales.find(
+        (a) => a.campoId === campoId && a.caravana === caravana
+      );
+      const datos: Partial<Animal> = {
         caravana,
-        ...datos,
-        alertas: [],
-        createdAt: now,
-        updatedAt: now,
-      } as Animal);
-      agregados++;
+        nombre: row.nombre ? String(row.nombre) : undefined,
+        sexo: row.sexo === "M" || row.sexo === "H" ? row.sexo : undefined,
+        raza: row.raza ? String(row.raza) : undefined,
+        categoria: row.categoria ? String(row.categoria) : undefined,
+        fechaNacimiento: row.fecha_nacimiento ? String(row.fecha_nacimiento) : undefined,
+        peso:
+          row.peso != null && row.peso !== ""
+            ? Number(row.peso)
+            : row.weight != null && row.weight !== ""
+            ? Number(row.weight)
+            : undefined,
+        observaciones: row.observaciones ? String(row.observaciones) : undefined,
+        loteId: opts.loteId,
+      };
+      if (existente) {
+        Object.assign(existente, datos, { updatedAt: now });
+        actualizados++;
+      } else {
+        db.animales.push({
+          id: uid("a_"),
+          campoId,
+          loteId: opts.loteId,
+          caravana,
+          ...datos,
+          // estado/activo iniciales para trazabilidad (RN14/RN07)
+          estado: "activo",
+          activo: true,
+          alertas: [],
+          createdAt: now,
+          updatedAt: now,
+        } as Animal);
+        agregados++;
+      }
     }
-  }
-  saveDB(db);
+  });
   return { agregados, actualizados, omitidos };
 }
