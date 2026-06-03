@@ -43,16 +43,43 @@ vercel --prod          # deploy
 ## 4. Bot SIGSA (aparte de Vercel)
 
 El bot vive en `src/app/api/sigsa/declarar` + `src/lib/sigsa-bot.ts` y usa Playwright/Chromium.
-Se construye con el `Dockerfile` incluido y se despliega en Cloud Run (o cualquier host con Docker):
+La ruta ya trae CORS + preflight + un GET de health. **No corre en Vercel serverless.**
+
+> Estado: la automatización SIGSA (navegar al servicio + subir el archivo) todavía es **placeholder
+> (`// TODO`)** en `sigsa-bot.ts`; el bot llega hasta el login de AFIP y falla en el paso SIGSA.
+> Completarla requiere acceso real al portal para fijar los selectores.
+
+### Opción A — Local + túnel gratis (sin Docker, sin tarjeta)
+
+Corre el bot con el Chrome instalado y lo expone con cloudflared:
+
+```
+powershell -ExecutionPolicy Bypass -File scripts\bot-local.ps1
+```
+
+Imprime una URL `https://...trycloudflare.com`. Ponela en Vercel como `NEXT_PUBLIC_BOT_URL`
+(Settings → Environment Variables) y redeployá. La máquina tiene que estar prendida.
+La URL de trycloudflare **cambia cada vez** que reiniciás el túnel; para una URL **estable y gratis**
+usá un *named tunnel* de Cloudflare (necesita cuenta Cloudflare + un dominio):
+`cloudflared tunnel create sigsa` → `cloudflared tunnel route dns sigsa bot.tudominio.com` →
+`cloudflared tunnel run --url http://localhost:3000 sigsa`.
+
+Sin instalar Node global, el bot también se puede levantar a mano:
+`set BOT_CHROME_CHANNEL=chrome && npm run build && npm start` (Chrome del sistema; en Linux/Mac
+usá `BOT_CHROME_CHANNEL=chrome`).
+
+### Opción B — Contenedor (cuando definas hosting pago/Cloud Run)
 
 ```
 docker build -t sigsa-bot .
-# desplegar la imagen; exponer la URL pública
+docker run -p 8080:8080 sigsa-bot          # la imagen trae Chromium; no precisa BOT_CHROME_*
 ```
 
-Luego seteá `NEXT_PUBLIC_BOT_URL` (en Vercel) a esa URL. El bot debe permitir CORS desde el dominio
-de la web (o ponés un proxy). Si `NEXT_PUBLIC_BOT_URL` queda vacío, la app llama la ruta interna
-`/api/sigsa/declarar`, que sólo funciona en hosts no-serverless.
+Desplegá esa imagen en Cloud Run (`gcloud run deploy --source .`, ~1GB RAM) u otro host con Docker,
+y apuntá `NEXT_PUBLIC_BOT_URL` a su URL pública.
+
+Si `NEXT_PUBLIC_BOT_URL` queda vacío, la app llama la ruta interna `/api/sigsa/declarar`
+(sólo sirve en hosts no-serverless).
 
 ## Notas de arquitectura
 
