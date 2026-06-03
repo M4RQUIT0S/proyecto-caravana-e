@@ -10,6 +10,14 @@ const empty: DBShape = {
   lotes: [],
   animales: [],
   invitaciones: [],
+  catalogos: [],
+  productos: [],
+  proveedores: [],
+  lecturas: [],
+  eventos: [],
+  documentos: [],
+  sincronizaciones: [],
+  costos: [],
   sesion: { userId: null },
 };
 

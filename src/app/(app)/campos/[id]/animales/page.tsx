@@ -22,6 +22,15 @@ import { rolEnCampo } from "@/lib/auth";
 import { uid, update } from "@/lib/storage";
 import { Modal } from "@/components/Modal";
 import { exportarAnimalesCSV, exportarAnimalesXLSX } from "@/lib/export";
+import {
+  caravanaUnicaActiva,
+  colorCaravana,
+  esActivo,
+  identificacionTemprana,
+  validarFormatoCII,
+} from "@/lib/reglas";
+import { validarAltaCoherencia, historialDeAnimal, aptitud } from "@/lib/eventos";
+import { estado as estadoAnimal } from "@/lib/reglas";
 import type { Animal, Alerta } from "@/lib/types";
 
 export default function AnimalesPage() {
@@ -42,7 +51,7 @@ export default function AnimalesPage() {
 
   const lotes = db.lotes.filter((l) => l.campoId === id);
   const animales = useMemo(() => {
-    let list = db.animales.filter((a) => a.campoId === id);
+    let list = db.animales.filter((a) => a.campoId === id && esActivo(a));
     if (loteSel === "_sin") list = list.filter((a) => !a.loteId);
     else if (loteSel) list = list.filter((a) => a.loteId === loteSel);
     if (filtro.trim()) {
@@ -59,9 +68,13 @@ export default function AnimalesPage() {
   }, [db.animales, id, loteSel, filtro]);
 
   function eliminar(animalId: string) {
-    if (!confirm("¿Eliminar este animal?")) return;
+    if (!confirm("¿Dar de baja este animal? Queda inactivo pero conserva su historial (RN07).")) return;
     update((db) => {
-      db.animales = db.animales.filter((a) => a.id !== animalId);
+      const a = db.animales.find((x) => x.id === animalId);
+      if (a) {
+        a.activo = false;
+        a.updatedAt = Date.now();
+      }
     });
     refresh();
   }
@@ -346,6 +359,7 @@ function AnimalFormModal({
   animal?: Animal;
 }) {
   const { db } = useApp();
+  const campo = db.campos.find((c) => c.id === campoId);
   const lotes = db.lotes.filter((l) => l.campoId === campoId);
   const editMode = !!animal;
   const formInicial = () => ({
@@ -370,34 +384,48 @@ function AnimalFormModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, animal?.id]);
 
+  // Validaciones en vivo para el alta (RNF-03: bloqueo, no advertencia).
+  const ciiTrim = form.caravana.trim();
+  const formatoCII = validarFormatoCII(ciiTrim); // RN01
+  const ciiLibre = caravanaUnicaActiva(ciiTrim, campoId, db.animales, animal?.id); // RN02
+  const altaBloqueada = !editMode && (!formatoCII.ok || !ciiLibre.ok);
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     const caravana = form.caravana.trim();
-    if (!caravana) {
+    if (!editMode) {
+      if (!formatoCII.ok) {
+        setErr(formatoCII.error!);
+        return;
+      }
+      if (!ciiLibre.ok) {
+        setErr(ciiLibre.error!);
+        return;
+      }
+    } else if (!caravana) {
       setErr("La caravana es obligatoria.");
       return;
     }
-    let duplicado = false;
+    const sexoVal =
+      form.sexo === "M" || form.sexo === "H" ? (form.sexo as "M" | "H") : undefined;
+    const coherencia = validarAltaCoherencia(form.categoria.trim() || undefined, sexoVal); // RN19
+    if (coherencia) {
+      setErr(coherencia);
+      return;
+    }
+    const tempr = identificacionTemprana(form.fechaNacimiento || undefined); // RN05
+    if (!tempr.ok) {
+      setErr(tempr.error!);
+      return;
+    }
+
     update((db) => {
-      const dup = db.animales.find(
-        (a) =>
-          a.campoId === campoId &&
-          a.caravana === caravana &&
-          a.id !== animal?.id
-      );
-      if (dup) {
-        duplicado = true;
-        return;
-      }
       const datos = {
         loteId: form.loteId || undefined,
         caravana,
         nombre: form.nombre.trim() || undefined,
-        sexo:
-          form.sexo === "M" || form.sexo === "H"
-            ? (form.sexo as "M" | "H")
-            : undefined,
+        sexo: sexoVal,
         raza: form.raza.trim() || undefined,
         categoria: form.categoria.trim() || undefined,
         peso: form.peso ? Number(form.peso) : undefined,
@@ -415,16 +443,17 @@ function AnimalFormModal({
           id: uid("a_"),
           campoId,
           ...datos,
+          estado: "activo", // RN14
+          activo: true, // RN07 (baja lógica)
+          colorCaravana: colorCaravana({
+            zonaVacunacionAftosa: campo?.zonaVacunacionAftosa,
+          }), // RN04
           alertas: [],
           createdAt: Date.now(),
           updatedAt: Date.now(),
         });
       }
     });
-    if (duplicado) {
-      setErr("Ya existe un animal con esa caravana en este campo.");
-      return;
-    }
     onSaved();
   }
 
@@ -444,13 +473,27 @@ function AnimalFormModal({
               className={`input ${editMode ? "opacity-60 cursor-not-allowed" : ""}`}
               value={form.caravana}
               onChange={(e) => setForm({ ...form, caravana: e.target.value })}
-              placeholder="982000123…"
+              placeholder="0123456789 (10 dígitos)"
+              inputMode="numeric"
               title={editMode ? "La caravana es el ID físico del animal y no se puede modificar." : undefined}
             />
-            {editMode && (
+            {editMode ? (
               <div className="text-[11px] text-ink-dim mt-1">
                 La caravana identifica físicamente al animal y no se puede cambiar.
               </div>
+            ) : (
+              ciiTrim.length > 0 && (
+                <div className="text-[11px] mt-1 space-y-0.5">
+                  <div className={formatoCII.ok ? "text-emerald-300" : "text-red-300"}>
+                    {formatoCII.ok ? "✓ formato OK (10 dígitos, RN01)" : `✗ ${formatoCII.error}`}
+                  </div>
+                  {formatoCII.ok && (
+                    <div className={ciiLibre.ok ? "text-emerald-300" : "text-red-300"}>
+                      {ciiLibre.ok ? "✓ CII libre (no duplicado, RN02)" : `✗ ${ciiLibre.error}`}
+                    </div>
+                  )}
+                </div>
+              )
             )}
           </Field>
           <Field label="Nombre">
@@ -530,7 +573,11 @@ function AnimalFormModal({
           <button type="button" onClick={onClose} className="btn-ghost text-sm">
             Cancelar
           </button>
-          <button className="btn-primary text-sm">
+          <button
+            className="btn-primary text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={altaBloqueada}
+            title={altaBloqueada ? "Corregí el CII para habilitar el alta (RNF-03)." : undefined}
+          >
             {editMode ? "Guardar cambios" : "Guardar animal"}
           </button>
         </div>
@@ -570,7 +617,7 @@ function AnimalDetalle({
   puedeEditar: boolean;
   onChange: () => void;
 }) {
-  const { user } = useApp();
+  const { db, user } = useApp();
   const [nuevaAlerta, setNuevaAlerta] = useState<Partial<Alerta>>({
     tipo: "sanitaria",
     titulo: "",
@@ -624,13 +671,20 @@ function AnimalDetalle({
           <FreshAnimal animalId={animal.id}>
             {(fresh) => (
               <div className="space-y-5">
+                <SemaforoAptitud animal={fresh} />
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                   <Info label="Nombre" value={fresh.nombre} />
                   <Info label="Sexo" value={fresh.sexo === "M" ? "Macho" : fresh.sexo === "H" ? "Hembra" : "—"} />
                   <Info label="Categoría" value={fresh.categoria} />
-                  <Info label="Raza" value={fresh.raza} />
+                  <Info label="Raza / biotipo" value={fresh.raza} />
                   <Info label="Peso" value={fresh.peso ? `${fresh.peso} kg` : undefined} />
+                  <Info label="Estado" value={estadoAnimal(fresh)} />
+                  <Info label="Color caravana" value={fresh.colorCaravana} />
                   <Info label="Nacimiento" value={fresh.fechaNacimiento} />
+                  <Info
+                    label="Carencia"
+                    value={fresh.fechaCarenciaHasta ? `hasta ${fresh.fechaCarenciaHasta}` : undefined}
+                  />
                 </div>
                 {fresh.observaciones && (
                   <div>
@@ -638,6 +692,8 @@ function AnimalDetalle({
                     <div className="text-sm text-ink-muted">{fresh.observaciones}</div>
                   </div>
                 )}
+                <div className="divider" />
+                <HistorialTimeline animalId={fresh.id} db={db} caravana={fresh.caravana} />
                 <div className="divider" />
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -781,7 +837,102 @@ function Info({ label, value }: { label: string; value?: string | number }) {
   return (
     <div>
       <div className="label mb-0.5">{label}</div>
-      <div className="text-ink">{value ?? "—"}</div>
+      <div className="text-ink capitalize">{value ?? "—"}</div>
+    </div>
+  );
+}
+
+function SemaforoAptitud({ animal }: { animal: Animal }) {
+  const apt = aptitud(animal);
+  const cls =
+    apt.color === "verde"
+      ? "border-emerald-400/30 bg-emerald-400/5 text-emerald-300"
+      : apt.color === "amber"
+      ? "border-amber-300/30 bg-amber-300/5 text-amber-200"
+      : "border-red-400/30 bg-red-400/5 text-red-300";
+  const dot =
+    apt.color === "verde" ? "bg-emerald-400" : apt.color === "amber" ? "bg-amber-300" : "bg-red-400";
+  return (
+    <div className={`rounded-xl border px-3 py-2.5 text-sm flex items-center gap-2 ${cls}`}>
+      <span className={`h-2.5 w-2.5 rounded-full ${dot}`} />
+      Aptitud: {apt.texto}
+    </div>
+  );
+}
+
+const ICONO_HISTORIAL: Record<string, string> = {
+  alta: "🐮",
+  sanitario: "💉",
+  pesaje: "⚖️",
+  movimiento: "🔁",
+  alerta: "🔔",
+};
+
+function HistorialTimeline({
+  animalId,
+  db,
+  caravana,
+}: {
+  animalId: string;
+  db: import("@/lib/types").DBShape;
+  caravana: string;
+}) {
+  const items = historialDeAnimal(animalId, db);
+
+  function exportar() {
+    const filas = items.map((it) => ({
+      fecha: it.fecha ?? new Date(it.fechaHora).toISOString().slice(0, 10),
+      tipo: it.tipo,
+      detalle: `${it.titulo}${it.detalle ? ` — ${it.detalle}` : ""}`.replace(/"/g, "'"),
+    }));
+    const header = "fecha,tipo,detalle";
+    const cuerpo = filas.map((f) => `${f.fecha},${f.tipo},"${f.detalle}"`).join("\n");
+    const blob = new Blob([`﻿${header}\n${cuerpo}`], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `historial-${caravana}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="font-display text-lg text-ink">Historial individual</h4>
+        {items.length > 0 && (
+          <button onClick={exportar} className="btn-ghost text-xs">
+            <Download size={13} /> Exportar historial
+          </button>
+        )}
+      </div>
+      {items.length === 0 ? (
+        <div className="text-sm text-ink-muted">Sin eventos registrados todavía.</div>
+      ) : (
+        <ul className="space-y-2.5">
+          {items.map((it) => (
+            <li key={it.id} className="flex gap-3 text-sm">
+              <span className="text-lg leading-none">{ICONO_HISTORIAL[it.tipo] ?? "•"}</span>
+              <div className="flex-1 border-b border-line/50 pb-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-ink">{it.titulo}</span>
+                  <span className="text-ink-dim text-xs whitespace-nowrap">
+                    {it.fecha ?? new Date(it.fechaHora).toLocaleDateString()}
+                  </span>
+                </div>
+                {it.detalle && <div className="text-ink-muted text-xs mt-0.5">{it.detalle}</div>}
+                {it.estadoSincronizacion && it.estadoSincronizacion !== "sincronizado" && (
+                  <span className="inline-block mt-1 text-[10px] uppercase tracking-wide text-amber-300/80">
+                    {it.estadoSincronizacion}
+                  </span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

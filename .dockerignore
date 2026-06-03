@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+dist
+.git
+.idea
+.vscode
+.claude
+.vercel
+*.log
+.DS_Store
+.env*
+!.env.example
+README.md
+tsconfig.tsbuildinfo

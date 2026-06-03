@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  AlertTriangle,
   Bot,
   CheckCircle2,
   ClipboardCheck,
@@ -15,6 +16,8 @@ import {
   FileText,
   KeyRound,
   Layers,
+  Loader2,
+  PlayCircle,
   ShieldCheck,
   Sparkles,
   Trash2,
@@ -310,6 +313,13 @@ interface SnapshotPendiente {
   acta: string;
 }
 
+interface ErrorBot {
+  etapa: string;
+  mensaje: string;
+  necesitaIntervencion?: boolean;
+  screenshotBase64?: string;
+}
+
 function LoteSigsaCard({
   resumen,
   userId,
@@ -335,6 +345,8 @@ function LoteSigsaCard({
     acta: string;
   } | null>(null);
   const [credsCopiadas, setCredsCopiadas] = useState<"cuit" | "clave" | null>(null);
+  const [botEjecutando, setBotEjecutando] = useState(false);
+  const [errorBot, setErrorBot] = useState<ErrorBot | null>(null);
 
   const sinPendientes = pendientes.length === 0;
   const pct = total === 0 ? 0 : Math.round((declarados / total) * 100);
@@ -405,6 +417,60 @@ function LoteSigsaCard({
     });
     setSnapshot(null);
     onChange();
+  }
+
+  async function dispararBot() {
+    if (!afip) {
+      onPedirCredenciales();
+      return;
+    }
+    if (!actaValida || pendientes.length === 0) return;
+    setErrorBot(null);
+    setBotEjecutando(true);
+    const ids = pendientes.map((a) => a.id);
+    const actaTrim = acta.trim();
+    try {
+      const res = await fetch("/api/sigsa/declarar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cuit: afip.cuit,
+          clave: afip.clave,
+          acta: actaTrim,
+          loteNombre: lote.nombre,
+          animales: pendientes.map((a) => ({
+            caravana: a.caravana,
+            sexo: a.sexo,
+            raza: a.raza,
+            categoria: a.categoria,
+            fechaNacimiento: a.fechaNacimiento,
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        const r = marcarComoDeclarados(ids, userId, actaTrim);
+        setMarcado({ ids, yaDeclarados: r.yaDeclarados, acta: actaTrim });
+        setSnapshot(null);
+        onChange();
+      } else {
+        setErrorBot({
+          etapa: data?.etapa ?? "desconocido",
+          mensaje: data?.mensaje ?? `Error HTTP ${res.status}`,
+          necesitaIntervencion: data?.necesitaIntervencion,
+          screenshotBase64: data?.screenshotBase64,
+        });
+      }
+    } catch (err: any) {
+      setErrorBot({
+        etapa: "red",
+        mensaje:
+          err?.message ??
+          "No se pudo contactar al servidor del bot. ¿Está corriendo en Cloud Run?",
+      });
+    } finally {
+      setBotEjecutando(false);
+    }
   }
 
   function deshacer() {
@@ -482,6 +548,80 @@ function LoteSigsaCard({
             className="overflow-hidden"
           >
             <div className="mt-5 rounded-xl border border-line bg-bg-soft/40 p-4 space-y-4">
+              {!marcado && (
+                <div className="rounded-xl border border-accent/40 bg-accent/5 p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-ink">
+                    <Bot size={15} className="text-accent" />
+                    <div className="font-display text-sm">Modo automático (Cloud Run)</div>
+                  </div>
+                  <p className="text-xs text-ink-muted">
+                    El bot inicia sesión en AFIP, navega a SIGSA y sube el archivo por
+                    vos. Si AFIP pide captcha o 2FA, el bot pausa y te avisa para que
+                    completes a mano.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={dispararBot}
+                      disabled={!actaValida || botEjecutando || !afip}
+                      className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {botEjecutando ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" /> Bot trabajando…
+                        </>
+                      ) : (
+                        <>
+                          <PlayCircle size={14} /> Disparar bot ({pendientes.length}{" "}
+                          caravana{pendientes.length === 1 ? "" : "s"})
+                        </>
+                      )}
+                    </button>
+                    {!afip && (
+                      <span className="text-[11px] text-amber-300">
+                        Configurá tus credenciales AFIP arriba.
+                      </span>
+                    )}
+                    {!actaValida && afip && (
+                      <span className="text-[11px] text-ink-muted">
+                        Cargá el N° de acta abajo para habilitar.
+                      </span>
+                    )}
+                  </div>
+                  {errorBot && (
+                    <div className="flex items-start gap-2 rounded-lg border border-red-300/30 bg-red-300/5 p-2.5 text-xs">
+                      <AlertTriangle size={14} className="text-red-300 mt-0.5 shrink-0" />
+                      <div className="flex-1">
+                        <div className="text-ink">
+                          <strong className="text-red-300">Falló en {errorBot.etapa}:</strong>{" "}
+                          {errorBot.mensaje}
+                        </div>
+                        {errorBot.necesitaIntervencion && (
+                          <div className="text-ink-muted mt-1">
+                            Probá el modo manual de abajo para esta corrida.
+                          </div>
+                        )}
+                        {errorBot.screenshotBase64 && (
+                          <details className="mt-2">
+                            <summary className="cursor-pointer text-accent">
+                              Ver captura del navegador
+                            </summary>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              alt="Captura del bot"
+                              className="mt-2 max-w-full rounded border border-line"
+                              src={`data:image/png;base64,${errorBot.screenshotBase64}`}
+                            />
+                          </details>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  <div className="text-[11px] text-ink-dim">
+                    ¿Preferís hacerlo a mano? Usá los pasos de abajo.
+                  </div>
+                </div>
+              )}
+
               <PasoFlujo
                 n={1}
                 titulo="Número de acta de vacunación"
