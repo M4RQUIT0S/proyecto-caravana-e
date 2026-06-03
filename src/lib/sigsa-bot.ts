@@ -106,8 +106,16 @@ export async function sincronizarSIGSA(input: BotInput): Promise<BotResultado> {
   let browser: Browser | undefined;
   let page: Page | undefined;
   try {
+    // En el contenedor (imagen de Playwright) se usa el Chromium incluido. Para correrlo
+    // localmente sin Docker se puede apuntar al Chrome del sistema con estas variables:
+    //   BOT_CHROME_CHANNEL=chrome   (usa el Google Chrome instalado)
+    //   BOT_CHROME_PATH=C:\...\chrome.exe   (ruta directa, alternativa)
+    const channel = process.env.BOT_CHROME_CHANNEL || undefined;
+    const executablePath = process.env.BOT_CHROME_PATH || undefined;
     browser = await chromium.launch({
       headless: true,
+      ...(channel ? { channel } : {}),
+      ...(executablePath ? { executablePath } : {}),
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
