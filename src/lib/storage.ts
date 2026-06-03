@@ -39,10 +39,28 @@ export function saveDB(db: DBShape) {
   window.dispatchEvent(new CustomEvent("caravanas:update"));
 }
 
+// Hook opcional: si la capa Supabase lo registra, cada update() empuja su diff al backend.
+type SyncHook = (prev: DBShape, next: DBShape) => void;
+let syncHook: SyncHook | null = null;
+export function setSyncHook(fn: SyncHook | null) {
+  syncHook = fn;
+}
+
 export function update<T>(fn: (db: DBShape) => T): T {
   const db = loadDB();
+  const prev: DBShape =
+    typeof structuredClone === "function"
+      ? structuredClone(db)
+      : JSON.parse(JSON.stringify(db));
   const result = fn(db);
   saveDB(db);
+  if (syncHook) {
+    try {
+      syncHook(prev, db);
+    } catch (e) {
+      console.error("[storage] syncHook error:", e);
+    }
+  }
   return result;
 }
 

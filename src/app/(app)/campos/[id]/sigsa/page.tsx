@@ -430,7 +430,11 @@ function LoteSigsaCard({
     const ids = pendientes.map((a) => a.id);
     const actaTrim = acta.trim();
     try {
-      const res = await fetch("/api/sigsa/declarar", {
+      // El bot usa Playwright y NO corre en Vercel serverless: se despliega aparte
+      // (Cloud Run / Docker) y se apunta su URL con NEXT_PUBLIC_BOT_URL. Sin esa
+      // variable, usa la ruta interna (sólo sirve fuera de Vercel).
+      const botBase = (process.env.NEXT_PUBLIC_BOT_URL ?? "").replace(/\/$/, "");
+      const res = await fetch(`${botBase}/api/sigsa/declarar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

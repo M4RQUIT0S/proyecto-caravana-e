@@ -9,6 +9,7 @@ import { RoleBadge } from "@/components/RoleBadge";
 import { Modal } from "@/components/Modal";
 import { useApp } from "@/lib/context";
 import { codigoCampo, uid, update } from "@/lib/storage";
+import { unirmeConCodigo } from "@/lib/colaboracion";
 import type { Rol } from "@/lib/types";
 
 export default function DashboardPage() {
@@ -218,40 +219,23 @@ function JoinModal({
   onClose: () => void;
   onJoined: () => void;
 }) {
-  const { user } = useApp();
   const [codigo, setCodigo] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [cargando, setCargando] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     setOk(null);
-    const cod = codigo.trim().toUpperCase();
-    let mensajeOk: string | null = null;
-    let error: string | null = null;
-    update((db) => {
-      const campo = db.campos.find((c) => c.codigo === cod);
-      if (!campo) {
-        error = "Código no encontrado.";
-        return;
-      }
-      if (campo.ownerId === user!.id) {
-        error = "Ya sos el admin de este campo.";
-        return;
-      }
-      if (campo.miembros.some((m) => m.userId === user!.id)) {
-        error = "Ya sos miembro de este campo.";
-        return;
-      }
-      campo.miembros.push({ userId: user!.id, rol: "vista", addedAt: Date.now() });
-      mensajeOk = `Te uniste a "${campo.nombre}" como sólo vista. Pedile a un admin que te cambie el rol si necesitás más permisos.`;
-    });
-    if (error) {
-      setErr(error);
+    setCargando(true);
+    const r = await unirmeConCodigo(codigo);
+    setCargando(false);
+    if (!r.ok) {
+      setErr(r.error);
       return;
     }
-    setOk(mensajeOk);
+    setOk("Te uniste al campo como sólo vista. Pedile al Productor que te cambie el rol si necesitás más permisos.");
     setCodigo("");
     onJoined();
   }
@@ -276,8 +260,8 @@ function JoinModal({
           <button type="button" onClick={onClose} className="btn-ghost text-sm">
             Cerrar
           </button>
-          <button className="btn-primary text-sm">
-            <LogIn size={14} /> Unirme
+          <button className="btn-primary text-sm" disabled={cargando}>
+            <LogIn size={14} /> {cargando ? "Uniéndome…" : "Unirme"}
           </button>
         </div>
       </form>

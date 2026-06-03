@@ -6,7 +6,7 @@ import { Mail, Check, X } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { RoleBadge } from "@/components/RoleBadge";
 import { useApp } from "@/lib/context";
-import { update } from "@/lib/storage";
+import { aceptarInvitacion, rechazarInvitacion } from "@/lib/colaboracion";
 
 export default function InvitacionesPage() {
   const { db, user, refresh } = useApp();
@@ -18,25 +18,14 @@ export default function InvitacionesPage() {
     );
   }, [db, user]);
 
-  function aceptar(id: string) {
-    update((d) => {
-      const inv = d.invitaciones.find((i) => i.id === id);
-      if (!inv) return;
-      const campo = d.campos.find((c) => c.id === inv.campoId);
-      if (!campo) return;
-      if (!campo.miembros.some((m) => m.userId === user!.id)) {
-        campo.miembros.push({ userId: user!.id, rol: inv.rol, addedAt: Date.now() });
-      }
-      inv.estado = "aceptada";
-    });
+  async function aceptar(id: string) {
+    const r = await aceptarInvitacion(id);
+    if (!r.ok) alert(r.error);
     refresh();
   }
 
-  function rechazar(id: string) {
-    update((d) => {
-      const inv = d.invitaciones.find((i) => i.id === id);
-      if (inv) inv.estado = "rechazada";
-    });
+  async function rechazar(id: string) {
+    await rechazarInvitacion(id);
     refresh();
   }
 
