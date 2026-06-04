@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { AppProvider } from "@/lib/context";
 
 export const metadata: Metadata = {
-  title: "Caravanas Electrónicas",
-  description: "Gestión de campos, lotes y animales con caravanas RFID.",
+  title: "AgroTrace",
+  description: "Trazabilidad ganadera: campos, lotes y animales con caravanas RFID.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

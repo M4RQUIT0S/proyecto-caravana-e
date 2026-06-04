@@ -44,7 +44,6 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
-        display: ["'Cormorant Garamond'", "Georgia", "serif"],
       },
       boxShadow: {
         soft: "0 4px 14px rgba(8,56,8,0.10)",

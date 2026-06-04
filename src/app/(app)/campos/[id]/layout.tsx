@@ -129,35 +129,30 @@ export default function CampoLayout({ children }: { children: React.ReactNode })
         </div>
       </motion.div>
 
-      <div className="border-b border-line mb-6 overflow-x-auto">
-        <div className="flex gap-1 min-w-max">
-          {tabsVisibles.map((t) => {
-            const Icon = t.icon;
-            const full = `/campos/${campo.id}${t.href}`;
-            const active =
-              t.href === ""
-                ? pathname === `/campos/${campo.id}`
-                : pathname?.startsWith(full);
-            return (
-              <Link
-                key={t.href}
-                href={full}
-                className={`relative inline-flex items-center gap-2 px-4 py-2.5 text-sm whitespace-nowrap transition ${
-                  active ? "text-ink" : "text-ink-muted hover:text-ink"
-                }`}
-              >
-                <Icon size={14} />
-                {t.label}
-                {active && (
-                  <motion.span
-                    layoutId="tab-underline"
-                    className="absolute -bottom-px left-0 right-0 h-0.5 bg-accent"
-                  />
-                )}
-              </Link>
-            );
-          })}
-        </div>
+      {/* Tabs responsive: envuelven en varias filas para que ninguna función quede oculta. */}
+      <div className="flex flex-wrap gap-1.5 mb-6 border-b border-line pb-3">
+        {tabsVisibles.map((t) => {
+          const Icon = t.icon;
+          const full = `/campos/${campo.id}${t.href}`;
+          const active =
+            t.href === ""
+              ? pathname === `/campos/${campo.id}`
+              : pathname?.startsWith(full);
+          return (
+            <Link
+              key={t.href}
+              href={full}
+              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm whitespace-nowrap transition ${
+                active
+                  ? "border-accent/30 bg-accent/10 text-accent font-medium"
+                  : "border-transparent text-ink-muted hover:text-ink hover:bg-bg-soft"
+              }`}
+            >
+              <Icon size={14} />
+              {t.label}
+            </Link>
+          );
+        })}
       </div>
 
       <motion.div
