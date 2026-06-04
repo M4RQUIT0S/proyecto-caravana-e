@@ -20,9 +20,9 @@ export function Logo({ size = 28 }: { size?: number }) {
         <circle cx="16" cy="12" r="2.4" fill="currentColor" />
       </svg>
       <div className="leading-tight">
-        <div className="font-display text-lg tracking-wide text-ink">Caravanas</div>
+        <div className="font-display text-lg text-ink">AgroTrace</div>
         <div className="text-[10px] uppercase tracking-[0.28em] text-ink-dim -mt-0.5">
-          Electrónicas
+          Trazabilidad
         </div>
       </div>
     </div>
