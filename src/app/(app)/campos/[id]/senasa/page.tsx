@@ -38,7 +38,7 @@ export default function SenasaPage() {
   return (
     <div className="space-y-6">
       {!campo.renspa && (
-        <div className="rounded-xl border border-amber-300/30 bg-amber-300/5 px-4 py-3 text-sm text-amber-200 flex items-center gap-2">
+        <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning flex items-center gap-2">
           <AlertTriangle size={16} />
           Cargá el RENSPA y el token del establecimiento en Catálogos: sin eso, SENASA rechaza los
           registros (RN15 / RN16).
@@ -142,14 +142,14 @@ function PrepararDTe({ campoId, onChange }: { campoId: string; onChange: () => v
                   <label
                     key={a.id}
                     className={`flex items-center gap-3 px-3 py-2 border-b border-line/50 last:border-0 cursor-pointer text-sm ${
-                      bloqueado ? "bg-red-400/10" : sel ? "bg-accent/5" : "hover:bg-bg-soft/60"
+                      bloqueado ? "bg-error/10" : sel ? "bg-accent/5" : "hover:bg-bg-soft/60"
                     }`}
                   >
                     <input type="checkbox" className="accent-accent" checked={sel} onChange={() => toggle(a.id)} />
                     <span className="font-mono text-accent">{a.caravana}</span>
                     <span
                       className={`ml-auto text-xs ${
-                        apt.color === "verde" ? "text-emerald-300" : apt.color === "amber" ? "text-amber-300" : "text-red-300"
+                        apt.color === "verde" ? "text-success" : apt.color === "amber" ? "text-warning" : "text-error"
                       }`}
                     >
                       {apt.texto}
@@ -162,8 +162,8 @@ function PrepararDTe({ campoId, onChange }: { campoId: string; onChange: () => v
         </div>
 
         {bloqueados.length > 0 && (
-          <div className="rounded-xl border border-red-400/30 bg-red-400/5 p-3 text-sm">
-            <div className="text-red-300 font-medium mb-1 flex items-center gap-1.5">
+          <div className="rounded-xl border border-error/30 bg-error/5 p-3 text-sm">
+            <div className="text-error font-medium mb-1 flex items-center gap-1.5">
               <XCircle size={15} /> Bloqueados por carencia/estado (RF-13)
             </div>
             <ul className="text-red-200/90 text-xs space-y-0.5">
@@ -178,7 +178,7 @@ function PrepararDTe({ campoId, onChange }: { campoId: string; onChange: () => v
         )}
 
         {msg && (
-          <div className={`text-sm flex items-center gap-2 ${msg.ok ? "text-emerald-300" : "text-red-300"}`}>
+          <div className={`text-sm flex items-center gap-2 ${msg.ok ? "text-success" : "text-error"}`}>
             {msg.ok ? <CheckCircle2 size={15} /> : <AlertTriangle size={15} />}
             {msg.text}
           </div>
@@ -246,14 +246,14 @@ function Sincronizacion({
       </div>
 
       {!online && (
-        <div className="rounded-lg border border-amber-300/30 bg-amber-300/5 px-3 py-2 text-xs text-amber-300">
+        <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
           Sin conexión: la sincronización requiere señal. La cola se conserva intacta (RNF-08).
         </div>
       )}
 
       <div className="flex items-center justify-between rounded-xl border border-line bg-bg-soft/40 px-4 py-3">
         <div>
-          <div className="font-display text-2xl text-amber-300 leading-none">{pendientes.length}</div>
+          <div className="font-display text-2xl text-warning leading-none">{pendientes.length}</div>
           <div className="text-xs text-ink-muted">registros pendientes</div>
         </div>
         <button onClick={sync} disabled={!online || pendientes.length === 0} className="btn-primary text-sm disabled:opacity-40">
@@ -274,18 +274,18 @@ function Sincronizacion({
 
       {res && (
         <div className="rounded-xl border border-line p-3 space-y-2">
-          <div className="text-sm text-emerald-300 flex items-center gap-2">
+          <div className="text-sm text-success flex items-center gap-2">
             <CheckCircle2 size={15} /> {res.aceptados} aceptados
           </div>
           {res.rechazados.length > 0 && (
             <div>
-              <div className="text-sm text-red-300 flex items-center gap-2 mb-1">
+              <div className="text-sm text-error flex items-center gap-2 mb-1">
                 <XCircle size={15} /> {res.rechazados.length} rechazados
               </div>
               <ul className="text-xs text-red-200/90 space-y-0.5">
                 {res.rechazados.map((r) => (
                   <li key={r.id}>
-                    {r.descripcion}: <span className="text-red-300">{r.motivo}</span>
+                    {r.descripcion}: <span className="text-error">{r.motivo}</span>
                   </li>
                 ))}
               </ul>
@@ -294,7 +294,7 @@ function Sincronizacion({
               </div>
             </div>
           )}
-          {res.error && <div className="text-xs text-amber-300">{res.error}</div>}
+          {res.error && <div className="text-xs text-warning">{res.error}</div>}
         </div>
       )}
 
@@ -310,10 +310,10 @@ function Sincronizacion({
                 <span
                   className={
                     l.resultado === "aceptado"
-                      ? "text-emerald-300"
+                      ? "text-success"
                       : l.resultado === "rechazado"
-                      ? "text-red-300"
-                      : "text-amber-300"
+                      ? "text-error"
+                      : "text-warning"
                   }
                 >
                   {l.resultado}

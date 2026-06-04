@@ -255,7 +255,7 @@ function AfipModal({
   return (
     <Modal open={open} onClose={onClose} title="Credenciales AFIP">
       <form onSubmit={submit} className="space-y-4">
-        <div className="rounded-xl border border-amber-300/30 bg-amber-300/5 p-3 text-xs text-ink-muted">
+        <div className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-xs text-ink-muted">
           ⚠ Estas credenciales se guardan <strong className="text-ink">solo en este
           dispositivo</strong> (localStorage del navegador). Esta app no tiene servidor
           y no las envía a ningún lado. Si compartís este dispositivo, mejor borrarlas
@@ -293,7 +293,7 @@ function AfipModal({
             </button>
           </div>
         </div>
-        {err && <div className="text-sm text-red-300">{err}</div>}
+        {err && <div className="text-sm text-error">{err}</div>}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="btn-ghost text-sm">
             Cancelar
@@ -581,7 +581,7 @@ function LoteSigsaCard({
                       )}
                     </button>
                     {!afip && (
-                      <span className="text-[11px] text-amber-300">
+                      <span className="text-[11px] text-warning">
                         Configurá tus credenciales AFIP arriba.
                       </span>
                     )}
@@ -592,11 +592,11 @@ function LoteSigsaCard({
                     )}
                   </div>
                   {errorBot && (
-                    <div className="flex items-start gap-2 rounded-lg border border-red-300/30 bg-red-300/5 p-2.5 text-xs">
-                      <AlertTriangle size={14} className="text-red-300 mt-0.5 shrink-0" />
+                    <div className="flex items-start gap-2 rounded-lg border border-error/30 bg-error/5 p-2.5 text-xs">
+                      <AlertTriangle size={14} className="text-error mt-0.5 shrink-0" />
                       <div className="flex-1">
                         <div className="text-ink">
-                          <strong className="text-red-300">Falló en {errorBot.etapa}:</strong>{" "}
+                          <strong className="text-error">Falló en {errorBot.etapa}:</strong>{" "}
                           {errorBot.mensaje}
                         </div>
                         {errorBot.necesitaIntervencion && (

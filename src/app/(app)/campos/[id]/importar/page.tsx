@@ -244,7 +244,7 @@ function ArchivoLocal({ onParsed }: { onParsed: (state: PreviewState) => void })
       >
         <Upload size={14} /> Elegir archivo
       </button>
-      {err && <div className="text-sm text-red-300 mt-4">{err}</div>}
+      {err && <div className="text-sm text-error mt-4">{err}</div>}
     </div>
   );
 }
@@ -307,7 +307,7 @@ function DriveImport({ onParsed }: { onParsed: (state: PreviewState) => void }) 
         </button>
       </div>
       {err && (
-        <div className="mt-4 flex items-start gap-2 text-sm text-red-300">
+        <div className="mt-4 flex items-start gap-2 text-sm text-error">
           <AlertTriangle size={14} className="mt-0.5" /> {err}
         </div>
       )}
@@ -379,7 +379,7 @@ function BluetoothImport({ onParsed }: { onParsed: (state: PreviewState) => void
   if (!disponible) {
     return (
       <div className="card p-6 text-sm text-ink-muted">
-        <div className="flex items-center gap-2 text-amber-300 mb-2">
+        <div className="flex items-center gap-2 text-warning mb-2">
           <AlertTriangle size={14} /> Web Bluetooth no disponible
         </div>
         Este navegador no soporta Web Bluetooth. Usá Chrome o Edge en escritorio
@@ -443,7 +443,7 @@ function BluetoothImport({ onParsed }: { onParsed: (state: PreviewState) => void
       </div>
 
       {err && (
-        <div className="flex items-start gap-2 text-sm text-red-300">
+        <div className="flex items-start gap-2 text-sm text-error">
           <AlertTriangle size={14} className="mt-0.5" /> {err}
         </div>
       )}

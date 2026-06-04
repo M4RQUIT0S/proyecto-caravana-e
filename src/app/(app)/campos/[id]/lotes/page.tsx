@@ -71,7 +71,7 @@ export default function LotesPage() {
                   {puedeEditar && (
                     <button
                       onClick={() => eliminar(l.id)}
-                      className="text-ink-dim hover:text-red-300"
+                      className="text-ink-dim hover:text-error"
                       title="Eliminar lote"
                     >
                       <Trash2 size={15} />

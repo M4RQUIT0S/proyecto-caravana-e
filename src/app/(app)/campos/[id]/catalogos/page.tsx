@@ -186,7 +186,7 @@ function Establecimiento({ campoId, onSaved }: { campoId: string; onSaved: () =>
             className={`chip uppercase ${
               color === "blanco"
                 ? "bg-white/90 text-black border-white"
-                : "bg-emerald-500/20 text-emerald-300 border-emerald-400/40"
+                : "bg-emerald-500/20 text-success border-success/40"
             }`}
           >
             {color}
@@ -195,7 +195,7 @@ function Establecimiento({ campoId, onSaved }: { campoId: string; onSaved: () =>
       </div>
 
       {msg && (
-        <div className={`text-sm ${msg.ok ? "text-emerald-300" : "text-red-300"}`}>
+        <div className={`text-sm ${msg.ok ? "text-success" : "text-error"}`}>
           {msg.text}
         </div>
       )}
@@ -529,7 +529,7 @@ function ListaSimple({
             </div>
             <button
               onClick={it.onDelete}
-              className="text-ink-dim hover:text-red-300"
+              className="text-ink-dim hover:text-error"
               title="Desactivar (baja lógica, RN07)"
             >
               <Trash2 size={15} />

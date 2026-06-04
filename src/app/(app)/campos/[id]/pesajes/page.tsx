@@ -106,7 +106,7 @@ export default function PesajesPage() {
           <h3 className="font-display text-xl text-ink">Registrar pesaje</h3>
         </div>
         {!online && (
-          <div className="rounded-lg border border-amber-300/30 bg-amber-300/5 px-3 py-2 text-xs text-amber-300">
+          <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
             Sin conexión: el pesaje se guarda local y sincroniza después (RNF-01).
           </div>
         )}
@@ -153,21 +153,21 @@ export default function PesajesPage() {
         </div>
 
         {adpvPreview != null && (
-          <div className="rounded-xl border border-sky-400/30 bg-sky-400/5 px-3 py-2.5 text-sm text-sky-300 flex items-center gap-2">
+          <div className="rounded-xl border border-info/30 bg-info/5 px-3 py-2.5 text-sm text-info flex items-center gap-2">
             <TrendingUp size={15} />
             ADPV estimado: {adpvPreview} kg/día respecto al pesaje anterior (RN13).
           </div>
         )}
 
         {fuera && peso && (
-          <div className="rounded-xl border border-amber-300/30 bg-amber-300/5 px-3 py-2.5 text-sm text-amber-200 flex items-center gap-2">
+          <div className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2.5 text-sm text-warning flex items-center gap-2">
             <AlertTriangle size={15} />
             Peso fuera del rango esperado para la categoría (RN08). Verificá antes de confirmar.
           </div>
         )}
 
         {msg && (
-          <div className={`text-sm flex items-center gap-2 ${msg.ok ? "text-emerald-300" : "text-red-300"}`}>
+          <div className={`text-sm flex items-center gap-2 ${msg.ok ? "text-success" : "text-error"}`}>
             {msg.ok ? <CheckCircle2 size={15} /> : <AlertTriangle size={15} />}
             {msg.text}
           </div>
@@ -175,7 +175,7 @@ export default function PesajesPage() {
 
         {pedirConfirmacion ? (
           <div className="flex items-center justify-end gap-2">
-            <span className="text-sm text-amber-200 mr-auto">Peso fuera de rango. ¿Confirmás?</span>
+            <span className="text-sm text-warning mr-auto">Peso fuera de rango. ¿Confirmás?</span>
             <button type="button" onClick={() => setPedirConfirmacion(false)} className="btn-ghost text-sm">
               Revisar
             </button>

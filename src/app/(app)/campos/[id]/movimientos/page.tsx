@@ -211,7 +211,7 @@ export default function MovimientosPage() {
                     <span className="text-ink-muted">{a.categoria || ""}</span>
                     <span
                       className={`ml-auto text-xs ${
-                        apt.color === "verde" ? "text-emerald-300" : apt.color === "amber" ? "text-amber-300" : "text-red-300"
+                        apt.color === "verde" ? "text-success" : apt.color === "amber" ? "text-warning" : "text-error"
                       }`}
                     >
                       {apt.texto}
@@ -230,7 +230,7 @@ export default function MovimientosPage() {
         </div>
 
         {msg && (
-          <div className={`text-sm flex items-center gap-2 ${msg.ok ? "text-emerald-300" : "text-red-300"}`}>
+          <div className={`text-sm flex items-center gap-2 ${msg.ok ? "text-success" : "text-error"}`}>
             {msg.ok ? <CheckCircle2 size={15} /> : <AlertTriangle size={15} />}
             {msg.text}
           </div>

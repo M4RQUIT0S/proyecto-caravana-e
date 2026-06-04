@@ -117,9 +117,9 @@ export default function ReportesPage() {
 
       {/* Cola de tropa */}
       {resumen.colaDeTropa.length > 0 && (
-        <div className="card p-5 border-amber-300/30">
+        <div className="card p-5 border-warning/30">
           <div className="flex items-center gap-2 mb-3">
-            <TrendingDown size={18} className="text-amber-300" />
+            <TrendingDown size={18} className="text-warning" />
             <h3 className="font-display text-lg text-ink">Cola de tropa</h3>
             <span className="chip text-xs">{resumen.colaDeTropa.length}</span>
           </div>
@@ -158,7 +158,7 @@ export default function ReportesPage() {
                     <td className="py-2 text-ink">{h.proveedor}</td>
                     <td className="text-ink-muted">{h.zonaOrigen ?? "—"}</td>
                     <td className="text-right text-ink-muted">{h.animales}</td>
-                    <td className={`text-right ${h.tasaMortandad > 0 ? "text-red-300" : "text-ink-muted"}`}>
+                    <td className={`text-right ${h.tasaMortandad > 0 ? "text-error" : "text-ink-muted"}`}>
                       {h.tasaMortandad}%
                     </td>
                     <td className="text-right text-ink-muted">{h.eventosSanitarios}</td>
@@ -194,14 +194,14 @@ export default function ReportesPage() {
               </thead>
               <tbody>
                 {resumen.filas.map((f) => (
-                  <tr key={f.animalId} className={`border-b border-line/50 ${f.colaDeTropa ? "bg-amber-300/5" : ""}`}>
+                  <tr key={f.animalId} className={`border-b border-line/50 ${f.colaDeTropa ? "bg-warning/5" : ""}`}>
                     <td className="py-2 font-mono text-accent">{f.caravana}</td>
                     <td className="text-ink-muted">{f.loteNombre ?? "—"}</td>
                     <td className="text-right text-ink-muted">{f.pesoActual ?? "—"}</td>
                     <td className="text-right text-ink-muted">{f.kilosGanados}</td>
                     <td className="text-right text-ink-muted">{f.adpv ?? "—"}</td>
                     <td className="text-right text-ink-muted">${miles(f.costoTotal)}</td>
-                    <td className={`text-right ${f.margen < 0 ? "text-red-300" : "text-emerald-300"}`}>
+                    <td className={`text-right ${f.margen < 0 ? "text-error" : "text-success"}`}>
                       ${miles(f.margen)}
                     </td>
                   </tr>
@@ -312,7 +312,7 @@ function Costos({ campoId, onChange }: { campoId: string; onChange: () => void }
                     refresh();
                     onChange();
                   }}
-                  className="text-ink-dim hover:text-red-300"
+                  className="text-ink-dim hover:text-error"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -340,7 +340,7 @@ function Kpi({
     <div className="card p-4">
       <Icon
         size={16}
-        className={accent === "rojo" ? "text-red-300" : accent === "verde" ? "text-emerald-300" : "text-accent"}
+        className={accent === "rojo" ? "text-error" : accent === "verde" ? "text-success" : "text-accent"}
       />
       <div className="font-display text-2xl text-ink mt-2 leading-none">{value}</div>
       <div className="text-xs text-ink-muted mt-1">{label}</div>
