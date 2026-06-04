@@ -196,3 +196,48 @@ end; $$;
 grant execute on function public.email_for_username(text) to anon, authenticated;
 grant execute on function public.unirme_con_codigo(text) to authenticated;
 grant execute on function public.aceptar_invitacion(text) to authenticated;
+
+-- ============================================================================
+-- Endurecimiento RLS por rol (permisos granulares del Operador delegado)
+-- ============================================================================
+-- Devuelve si el usuario actual puede ejecutar `accion` en el campo `cid`.
+-- owner/admin/usuario: roles operativos plenos. operador: sólo sus permisos.
+-- vista: nada.
+create or replace function public.member_permite(cid text, accion text)
+returns boolean language sql stable security definer set search_path = public as $$
+  select
+    exists (select 1 from public.campos c where c.id = cid and c.owner_id = auth.uid())
+    or exists (
+      select 1
+      from public.campos c, jsonb_array_elements(coalesce(c.data -> 'miembros', '[]'::jsonb)) m
+      where c.id = cid
+        and (m ->> 'userId')::uuid = auth.uid()
+        and coalesce((m ->> 'activo')::boolean, true) = true
+        and case coalesce(m ->> 'rol', 'vista')
+              when 'vista' then false
+              when 'operador' then coalesce((m -> 'permisos' ->> accion)::boolean, false)
+              else true
+            end
+    );
+$$;
+grant execute on function public.member_permite(text, text) to authenticated;
+
+-- eventos: el INSERT exige el permiso correspondiente al tipo (para operadores).
+drop policy if exists eventos_mod on public.eventos;
+create policy eventos_mod on public.eventos for all
+  using (public.can_write_campo(campo_id))
+  with check (public.member_permite(
+    campo_id,
+    case data ->> 'tipo'
+      when 'sanitario' then 'sanidad'
+      when 'pesaje' then 'pesaje'
+      when 'movimiento' then 'movimiento'
+      else 'capturar'
+    end
+  ));
+
+-- lecturas RFID: requieren permiso de captura.
+drop policy if exists lecturas_mod on public.lecturas;
+create policy lecturas_mod on public.lecturas for all
+  using (public.can_write_campo(campo_id))
+  with check (public.member_permite(campo_id, 'capturar'));

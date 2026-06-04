@@ -103,10 +103,16 @@ select.input optgroup {
   @apply text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted;
 }
 
-/* Títulos: sans geométrica (Inter) en peso fuerte, según el design system. */
+/* Jerarquía tipográfica (sans geométrica Inter), según el design system:
+   - .font-display: título de pantalla (700)
+   - .font-heading: heading de sección (600) */
 .font-display {
   font-family: "Inter", system-ui, sans-serif;
   @apply font-bold tracking-tight;
+}
+.font-heading {
+  font-family: "Inter", system-ui, sans-serif;
+  @apply font-semibold tracking-tight;
 }
 
 .divider {
