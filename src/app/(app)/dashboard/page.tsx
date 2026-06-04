@@ -7,6 +7,7 @@ import { Plus, MapPin, Users, KeyRound, LogIn } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { RoleBadge } from "@/components/RoleBadge";
 import { Modal } from "@/components/Modal";
+import { GlobalShell } from "@/components/GlobalShell";
 import { useApp } from "@/lib/context";
 import { codigoCampo, uid, update } from "@/lib/storage";
 import { unirmeConCodigo } from "@/lib/colaboracion";
@@ -31,7 +32,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div>
+    <GlobalShell>
       <PageHeader
         eyebrow={`Hola, ${user?.username ?? ""}`}
         title="Tus campos"
@@ -134,7 +135,7 @@ export default function DashboardPage() {
           refresh();
         }}
       />
-    </div>
+    </GlobalShell>
   );
 }
 

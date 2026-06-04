@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Mail, Check, X } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { RoleBadge } from "@/components/RoleBadge";
+import { GlobalShell } from "@/components/GlobalShell";
 import { useApp } from "@/lib/context";
 import { aceptarInvitacion, rechazarInvitacion } from "@/lib/colaboracion";
 
@@ -30,7 +31,7 @@ export default function InvitacionesPage() {
   }
 
   return (
-    <div>
+    <GlobalShell>
       <PageHeader
         eyebrow="Bandeja"
         title="Invitaciones"
@@ -90,6 +91,6 @@ export default function InvitacionesPage() {
           })}
         </ul>
       )}
-    </div>
+    </GlobalShell>
   );
 }
