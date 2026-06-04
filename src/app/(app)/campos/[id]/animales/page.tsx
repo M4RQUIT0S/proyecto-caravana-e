@@ -33,6 +33,26 @@ import { validarAltaCoherencia, historialDeAnimal, aptitud } from "@/lib/eventos
 import { estado as estadoAnimal } from "@/lib/reglas";
 import type { Animal, Alerta } from "@/lib/types";
 
+// Razas/biotipos disponibles en el desplegable del formulario de animal.
+const RAZAS = [
+  "Angus",
+  "Hereford",
+  "Shorthorn",
+  "Limousin",
+  "Charolais",
+  "Fleckvieh / Simmental",
+  "Limangus",
+  "Brangus",
+  "Braford",
+  "Brahman",
+  "Bonsmara",
+  "Holando Argentino",
+  "Jersey",
+  "Pardo Suizo",
+  "Wagyu",
+  "Búfalo",
+];
+
 export default function AnimalesPage() {
   const { id } = useParams<{ id: string }>();
   const sp = useSearchParams();
@@ -523,12 +543,22 @@ function AnimalFormModal({
             />
           </Field>
           <Field label="Raza">
-            <input
+            <select
               className="input"
               value={form.raza}
               onChange={(e) => setForm({ ...form, raza: e.target.value })}
-              placeholder="Angus, Hereford…"
-            />
+            >
+              <option value="">— Sin especificar —</option>
+              {RAZAS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+              {/* Conserva una raza preexistente (ej. importada) que no esté en la lista */}
+              {form.raza && !RAZAS.includes(form.raza) && (
+                <option value={form.raza}>{form.raza}</option>
+              )}
+            </select>
           </Field>
           <Field label="Lote">
             <select
