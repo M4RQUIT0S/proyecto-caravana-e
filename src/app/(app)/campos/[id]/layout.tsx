@@ -108,8 +108,8 @@ export default function CampoLayout({ children }: { children: React.ReactNode })
           <span
             className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
               online
-                ? "text-emerald-300 border-emerald-400/30 bg-emerald-400/10"
-                : "text-red-300 border-red-400/30 bg-red-400/10"
+                ? "text-success border-success/30 bg-success/10"
+                : "text-error border-error/30 bg-error/10"
             }`}
             title={online ? "Con conexión" : "Sin conexión: capturás offline, se sincroniza después (RNF-01)"}
           >
@@ -118,7 +118,7 @@ export default function CampoLayout({ children }: { children: React.ReactNode })
           </span>
           {pendientes > 0 && (
             <span
-              className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-0.5 text-xs font-medium text-amber-300"
+              className="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning"
               title="Registros en cola de sincronización (RNF-08). Nada se pierde."
             >
               <RefreshCw size={12} /> {pendientes} en cola

@@ -121,7 +121,7 @@ export function Navbar() {
                     setOpen(false);
                     salir();
                   }}
-                  className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-ink-muted hover:text-red-300 hover:bg-red-500/5"
+                  className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-ink-muted hover:text-error hover:bg-red-500/5"
                 >
                   <LogOut size={16} />
                   Cerrar sesión ({user.username})

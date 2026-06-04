@@ -172,7 +172,7 @@ export default function UsuariosPage() {
                   {esAdmin && (
                     <button
                       onClick={() => cancelarInv(inv.id)}
-                      className="text-ink-dim hover:text-red-300"
+                      className="text-ink-dim hover:text-error"
                       title="Cancelar invitación"
                     >
                       <Trash2 size={15} />
@@ -228,7 +228,7 @@ function Miembro({
           <div className="text-ink text-sm flex items-center gap-2">
             {username}
             {tag && <span className="chip text-[10px]">{tag}</span>}
-            {!activo && <span className="chip text-[10px] text-red-300">inactivo</span>}
+            {!activo && <span className="chip text-[10px] text-error">inactivo</span>}
           </div>
           <div className="text-xs text-ink-dim">{email}</div>
         </div>
@@ -249,12 +249,12 @@ function Miembro({
             <RoleBadge rol={rol} />
           )}
           {activo && onQuitar && (
-            <button onClick={onQuitar} className="text-ink-dim hover:text-red-300" title="Dar de baja (RN07)">
+            <button onClick={onQuitar} className="text-ink-dim hover:text-error" title="Dar de baja (RN07)">
               <Trash2 size={15} />
             </button>
           )}
           {!activo && onReactivar && (
-            <button onClick={onReactivar} className="text-ink-dim hover:text-emerald-300 text-xs">
+            <button onClick={onReactivar} className="text-ink-dim hover:text-success text-xs">
               Reactivar
             </button>
           )}
@@ -388,7 +388,7 @@ function InvitarModal({
             <strong className="text-ink-muted">Sólo lectura</strong>: consulta.
           </p>
         </div>
-        {err && <div className="text-sm text-red-300">{err}</div>}
+        {err && <div className="text-sm text-error">{err}</div>}
         {info && <div className="text-sm text-accent-soft">{info}</div>}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="btn-ghost text-sm">

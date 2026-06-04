@@ -115,7 +115,7 @@ export default function SanidadPage() {
           <h3 className="font-display text-xl text-ink">Registrar evento sanitario</h3>
         </div>
         {!online && (
-          <div className="rounded-lg border border-amber-300/30 bg-amber-300/5 px-3 py-2 text-xs text-amber-300">
+          <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
             Sin conexión: el evento se guarda local y se sincroniza después (RNF-01).
           </div>
         )}
@@ -163,7 +163,7 @@ export default function SanidadPage() {
               ))}
             </select>
             {catalogos.length === 0 && (
-              <div className="text-[11px] text-amber-300 mt-1">
+              <div className="text-[11px] text-warning mt-1">
                 No hay eventos sanitarios en el catálogo. Cargalos en Catálogos (RN12).
               </div>
             )}
@@ -214,8 +214,8 @@ export default function SanidadPage() {
           <div
             className={`rounded-xl border px-3 py-2.5 text-sm flex items-center gap-2 ${
               finCarencia
-                ? "border-amber-300/30 bg-amber-300/5 text-amber-200"
-                : "border-emerald-400/30 bg-emerald-400/5 text-emerald-300"
+                ? "border-warning/30 bg-warning/5 text-warning"
+                : "border-success/30 bg-success/5 text-success"
             }`}
           >
             <AlertTriangle size={15} />
@@ -226,7 +226,7 @@ export default function SanidadPage() {
         )}
 
         {msg && (
-          <div className={`text-sm flex items-center gap-2 ${msg.ok ? "text-emerald-300" : "text-red-300"}`}>
+          <div className={`text-sm flex items-center gap-2 ${msg.ok ? "text-success" : "text-error"}`}>
             {msg.ok ? <CheckCircle2 size={15} /> : <AlertTriangle size={15} />}
             {msg.text}
           </div>

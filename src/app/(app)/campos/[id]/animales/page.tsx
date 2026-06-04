@@ -270,7 +270,7 @@ export default function AnimalesPage() {
                   <div className="text-ink-muted">{lote?.nombre || "—"}</div>
                   <div>
                     {activas > 0 ? (
-                      <span className="inline-flex items-center gap-1 text-amber-300 text-xs">
+                      <span className="inline-flex items-center gap-1 text-warning text-xs">
                         <BellRing size={12} />
                         {activas}
                       </span>
@@ -295,7 +295,7 @@ export default function AnimalesPage() {
                           e.stopPropagation();
                           eliminar(a.id);
                         }}
-                        className="text-ink-dim hover:text-red-300"
+                        className="text-ink-dim hover:text-error"
                         title="Eliminar animal"
                       >
                         <Trash2 size={15} />
@@ -484,11 +484,11 @@ function AnimalFormModal({
             ) : (
               ciiTrim.length > 0 && (
                 <div className="text-[11px] mt-1 space-y-0.5">
-                  <div className={formatoCII.ok ? "text-emerald-300" : "text-red-300"}>
+                  <div className={formatoCII.ok ? "text-success" : "text-error"}>
                     {formatoCII.ok ? "✓ formato OK (10 dígitos, RN01)" : `✗ ${formatoCII.error}`}
                   </div>
                   {formatoCII.ok && (
-                    <div className={ciiLibre.ok ? "text-emerald-300" : "text-red-300"}>
+                    <div className={ciiLibre.ok ? "text-success" : "text-error"}>
                       {ciiLibre.ok ? "✓ CII libre (no duplicado, RN02)" : `✗ ${ciiLibre.error}`}
                     </div>
                   )}
@@ -568,7 +568,7 @@ function AnimalFormModal({
             onChange={(e) => setForm({ ...form, observaciones: e.target.value })}
           />
         </Field>
-        {err && <div className="text-sm text-red-300">{err}</div>}
+        {err && <div className="text-sm text-error">{err}</div>}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="btn-ghost text-sm">
             Cancelar
@@ -712,7 +712,7 @@ function AnimalDetalle({
                           className={`flex items-start justify-between gap-3 rounded-lg border px-3 py-2.5 ${
                             al.resuelta
                               ? "border-line bg-bg-soft/40 text-ink-dim"
-                              : "border-amber-300/20 bg-amber-300/5"
+                              : "border-warning/20 bg-warning/5"
                           }`}
                         >
                           <div className="text-sm">
@@ -746,7 +746,7 @@ function AnimalDetalle({
                               </button>
                               <button
                                 onClick={() => quitarAlerta(al.id)}
-                                className="rounded-md border border-line p-1.5 text-ink-dim hover:text-red-300"
+                                className="rounded-md border border-line p-1.5 text-ink-dim hover:text-error"
                               >
                                 <X size={13} />
                               </button>
@@ -846,12 +846,12 @@ function SemaforoAptitud({ animal }: { animal: Animal }) {
   const apt = aptitud(animal);
   const cls =
     apt.color === "verde"
-      ? "border-emerald-400/30 bg-emerald-400/5 text-emerald-300"
+      ? "border-success/30 bg-success/5 text-success"
       : apt.color === "amber"
-      ? "border-amber-300/30 bg-amber-300/5 text-amber-200"
-      : "border-red-400/30 bg-red-400/5 text-red-300";
+      ? "border-warning/30 bg-warning/5 text-warning"
+      : "border-error/30 bg-error/5 text-error";
   const dot =
-    apt.color === "verde" ? "bg-emerald-400" : apt.color === "amber" ? "bg-amber-300" : "bg-red-400";
+    apt.color === "verde" ? "bg-success" : apt.color === "amber" ? "bg-warning" : "bg-error";
   return (
     <div className={`rounded-xl border px-3 py-2.5 text-sm flex items-center gap-2 ${cls}`}>
       <span className={`h-2.5 w-2.5 rounded-full ${dot}`} />
@@ -924,7 +924,7 @@ function HistorialTimeline({
                 </div>
                 {it.detalle && <div className="text-ink-muted text-xs mt-0.5">{it.detalle}</div>}
                 {it.estadoSincronizacion && it.estadoSincronizacion !== "sincronizado" && (
-                  <span className="inline-block mt-1 text-[10px] uppercase tracking-wide text-amber-300/80">
+                  <span className="inline-block mt-1 text-[10px] uppercase tracking-wide text-warning/80">
                     {it.estadoSincronizacion}
                   </span>
                 )}

@@ -196,7 +196,7 @@ function NewCampoModal({
             placeholder="Ubicación, hectáreas, notas…"
           />
         </div>
-        {err && <div className="text-sm text-red-300">{err}</div>}
+        {err && <div className="text-sm text-error">{err}</div>}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="btn-ghost text-sm">
             Cancelar
@@ -254,7 +254,7 @@ function JoinModal({
           onChange={(e) => setCodigo(e.target.value.toUpperCase())}
           placeholder="ABC123"
         />
-        {err && <div className="text-sm text-red-300">{err}</div>}
+        {err && <div className="text-sm text-error">{err}</div>}
         {ok && <div className="text-sm text-accent-soft">{ok}</div>}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="btn-ghost text-sm">

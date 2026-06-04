@@ -105,18 +105,18 @@ export default function MangaPage() {
       <div
         className={`rounded-2xl border p-4 flex items-center justify-between ${
           online
-            ? "border-emerald-400/30 bg-emerald-400/5"
-            : "border-red-400/40 bg-red-400/10"
+            ? "border-success/30 bg-success/5"
+            : "border-error/40 bg-error/10"
         }`}
       >
         <div className="flex items-center gap-3">
           {online ? (
-            <Wifi className="text-emerald-300" />
+            <Wifi className="text-success" />
           ) : (
-            <WifiOff className="text-red-300" />
+            <WifiOff className="text-error" />
           )}
           <div>
-            <div className={`font-display text-lg ${online ? "text-emerald-300" : "text-red-300"}`}>
+            <div className={`font-display text-lg ${online ? "text-success" : "text-error"}`}>
               {online ? "CON CONEXIÓN" : "SIN CONEXIÓN"}
             </div>
             <div className="text-xs text-ink-muted">
@@ -125,7 +125,7 @@ export default function MangaPage() {
           </div>
         </div>
         <div className="text-right">
-          <div className="font-display text-2xl text-amber-300 leading-none">{pendientes}</div>
+          <div className="font-display text-2xl text-warning leading-none">{pendientes}</div>
           <div className="text-xs text-ink-muted">en cola</div>
         </div>
       </div>
@@ -158,7 +158,7 @@ export default function MangaPage() {
           </div>
         )}
         {errorBt && (
-          <div className="rounded-lg border border-amber-300/30 bg-amber-300/5 px-3 py-2 text-xs text-amber-300">
+          <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
             {errorBt}
           </div>
         )}
@@ -184,7 +184,7 @@ export default function MangaPage() {
         </form>
 
         {okMsg && (
-          <div className="text-sm text-emerald-300 flex items-center gap-2">
+          <div className="text-sm text-success flex items-center gap-2">
             <CheckCircle2 size={15} /> {okMsg}
           </div>
         )}
@@ -197,7 +197,7 @@ export default function MangaPage() {
             <div className="label mb-1">CII leído</div>
             <div className="font-mono text-4xl tracking-wider text-accent">{leido}</div>
             {formato && !formato.ok && (
-              <div className="text-red-300 text-sm mt-2 flex items-center justify-center gap-1">
+              <div className="text-error text-sm mt-2 flex items-center justify-center gap-1">
                 <AlertTriangle size={14} /> {formato.error}
               </div>
             )}
@@ -225,7 +225,7 @@ export default function MangaPage() {
               </p>
             </>
           ) : formato?.ok ? (
-            <div className="rounded-xl border border-amber-300/30 bg-amber-300/5 p-4 text-center text-sm text-amber-200">
+            <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 text-center text-sm text-warning">
               <div className="mb-3">No existe un animal activo con este CII.</div>
               <button
                 onClick={() => router.push(`/campos/${id}/animales`)}
@@ -245,10 +245,10 @@ function Semaforo({ animal }: { animal: Animal }) {
   const apt = aptitud(animal);
   const cls =
     apt.color === "verde"
-      ? "border-emerald-400/30 bg-emerald-400/5 text-emerald-300"
+      ? "border-success/30 bg-success/5 text-success"
       : apt.color === "amber"
-      ? "border-amber-300/30 bg-amber-300/5 text-amber-200"
-      : "border-red-400/30 bg-red-400/5 text-red-300";
+      ? "border-warning/30 bg-warning/5 text-warning"
+      : "border-error/30 bg-error/5 text-error";
   return (
     <div className={`rounded-xl border px-3 py-2 text-sm text-center ${cls}`}>{apt.texto}</div>
   );

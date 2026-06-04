@@ -7,12 +7,12 @@ const map: Record<Rol, { label: string; color: string; Icon: any }> = {
   admin: { label: "Productor", color: "text-accent border-accent/40 bg-accent/10", Icon: Shield },
   operador: {
     label: "Operador delegado",
-    color: "text-amber-300 border-amber-300/30 bg-amber-300/10",
+    color: "text-warning border-warning/30 bg-warning/10",
     Icon: HardHat,
   },
   usuario: {
     label: "Usuario",
-    color: "text-sky-300 border-sky-300/30 bg-sky-300/10",
+    color: "text-info border-info/30 bg-info/10",
     Icon: UserCog,
   },
   vista: {
