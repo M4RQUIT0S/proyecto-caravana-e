@@ -53,6 +53,17 @@ const RAZAS = [
   "Búfalo",
 ];
 
+// Categorías disponibles en el desplegable del formulario de animal.
+const CATEGORIAS = [
+  "Ternero/a",
+  "Novillito",
+  "Novillo",
+  "Macho entero joven (MEJ)",
+  "Toro",
+  "Vaquillona",
+  "Vaca",
+];
+
 export default function AnimalesPage() {
   const { id } = useParams<{ id: string }>();
   const sp = useSearchParams();
@@ -535,12 +546,22 @@ function AnimalFormModal({
             </select>
           </Field>
           <Field label="Categoría">
-            <input
+            <select
               className="input"
               value={form.categoria}
               onChange={(e) => setForm({ ...form, categoria: e.target.value })}
-              placeholder="Vacas, Toros…"
-            />
+            >
+              <option value="">— Sin especificar —</option>
+              {CATEGORIAS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+              {/* Conserva una categoría preexistente que no esté en la lista (ej. importada) */}
+              {form.categoria && !CATEGORIAS.includes(form.categoria) && (
+                <option value={form.categoria}>{form.categoria}</option>
+              )}
+            </select>
           </Field>
           <Field label="Raza">
             <select
