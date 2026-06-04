@@ -35,7 +35,10 @@ const config: Config = {
           weak: "#F8D8D0", // accent-100 (disabled)
         },
         success: "#285820",
-        warning: "#FC8B00",
+        // warning del sistema es #FC8B00, pero como texto sobre crema queda de bajo
+        // contraste; usamos un ámbar más profundo (legible AA) reservando el naranja
+        // brillante (token `action`) para los CTAs.
+        warning: "#B45309",
         error: "#C0392B",
         info: "#2C5F8A",
       },
