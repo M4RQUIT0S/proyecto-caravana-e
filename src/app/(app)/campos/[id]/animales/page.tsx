@@ -16,6 +16,10 @@ import {
   FileSpreadsheet,
   FileText,
   ArrowRightLeft,
+  Syringe,
+  Scale,
+  PlusCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { useApp } from "@/lib/context";
 import { rolEnCampo } from "@/lib/auth";
@@ -722,28 +726,13 @@ function AnimalDetalle({
           <FreshAnimal animalId={animal.id}>
             {(fresh) => (
               <div className="space-y-5">
-                <SemaforoAptitud animal={fresh} />
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                  <Info label="Nombre" value={fresh.nombre} />
-                  <Info label="Sexo" value={fresh.sexo === "M" ? "Macho" : fresh.sexo === "H" ? "Hembra" : "—"} />
-                  <Info label="Categoría" value={fresh.categoria} />
-                  <Info label="Raza / biotipo" value={fresh.raza} />
-                  <Info label="Peso" value={fresh.peso ? `${fresh.peso} kg` : undefined} />
-                  <Info label="Estado" value={estadoAnimal(fresh)} />
-                  <Info label="Color caravana" value={fresh.colorCaravana} />
-                  <Info label="Nacimiento" value={fresh.fechaNacimiento} />
-                  <Info
-                    label="Carencia"
-                    value={fresh.fechaCarenciaHasta ? `hasta ${fresh.fechaCarenciaHasta}` : undefined}
-                  />
-                </div>
+                <AnimalBanner animal={fresh} db={db} />
                 {fresh.observaciones && (
                   <div>
                     <div className="label mb-1">Observaciones</div>
                     <div className="text-sm text-ink-muted">{fresh.observaciones}</div>
                   </div>
                 )}
-                <div className="divider" />
                 <HistorialTimeline animalId={fresh.id} db={db} caravana={fresh.caravana} />
                 <div className="divider" />
                 <div>
@@ -893,31 +882,98 @@ function Info({ label, value }: { label: string; value?: string | number }) {
   );
 }
 
-function SemaforoAptitud({ animal }: { animal: Animal }) {
+function AnimalBanner({
+  animal,
+  db,
+}: {
+  animal: Animal;
+  db: import("@/lib/types").DBShape;
+}) {
   const apt = aptitud(animal);
-  const cls =
-    apt.color === "verde"
-      ? "border-success/30 bg-success/5 text-success"
-      : apt.color === "amber"
-      ? "border-warning/30 bg-warning/5 text-warning"
-      : "border-error/30 bg-error/5 text-error";
-  const dot =
-    apt.color === "verde" ? "bg-success" : apt.color === "amber" ? "bg-warning" : "bg-error";
+  const lote = db.lotes.find((l) => l.id === animal.loteId);
+  const est = estadoAnimal(animal);
+  const estDot =
+    est === "activo"
+      ? "bg-action"
+      : est === "muerto" || est === "egresado"
+      ? "bg-error"
+      : "bg-warning";
+  const aptCls =
+    apt.color === "verde" ? "text-success" : apt.color === "amber" ? "text-warning" : "text-error";
   return (
-    <div className={`rounded-xl border px-3 py-2.5 text-sm flex items-center gap-2 ${cls}`}>
-      <span className={`h-2.5 w-2.5 rounded-full ${dot}`} />
-      Aptitud: {apt.texto}
+    <div className="rounded-2xl overflow-hidden border border-line shadow-soft">
+      <div className="bg-accent-deep text-white p-4 sm:p-5 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
+            CII
+          </div>
+          <div className="font-display text-2xl sm:text-3xl text-white break-all">
+            {animal.caravana}
+          </div>
+          <div className="text-white/80 text-sm mt-0.5">
+            {[animal.categoria, animal.raza].filter(Boolean).join(" · ") || "Sin clasificar"}
+          </div>
+        </div>
+        <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white">
+          <span className={`h-2 w-2 rounded-full ${estDot}`} /> Estado: {est}
+        </span>
+      </div>
+      <div className="bg-bg-card grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 sm:p-5">
+        <Dato label="Lote actual" valor={lote?.nombre || "Sin lote"} />
+        <Dato label="Último peso" valor={animal.peso ? `${animal.peso} kg` : "—"} />
+        <div>
+          <div className="label mb-1">Aptitud de movimiento</div>
+          <div className={`inline-flex items-center gap-1.5 text-sm font-semibold ${aptCls}`}>
+            <CheckCircle2 size={15} /> {apt.texto}
+          </div>
+        </div>
+      </div>
+      <div className="bg-bg-card flex flex-wrap gap-x-4 gap-y-1 px-4 sm:px-5 pb-4 pt-3 text-xs text-ink-muted border-t border-line/60">
+        <span>
+          Sexo:{" "}
+          <b className="text-ink font-medium">
+            {animal.sexo === "M" ? "Macho" : animal.sexo === "H" ? "Hembra" : "—"}
+          </b>
+        </span>
+        <span>
+          Nacimiento: <b className="text-ink font-medium">{animal.fechaNacimiento || "—"}</b>
+        </span>
+        <span>
+          Color: <b className="text-ink font-medium capitalize">{animal.colorCaravana || "—"}</b>
+        </span>
+        {animal.fechaCarenciaHasta && (
+          <span className="text-warning font-medium">
+            En carencia hasta {animal.fechaCarenciaHasta}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
 
-const ICONO_HISTORIAL: Record<string, string> = {
-  alta: "🐮",
-  sanitario: "💉",
-  pesaje: "⚖️",
-  movimiento: "🔁",
-  alerta: "🔔",
+function Dato({ label, valor }: { label: string; valor: string }) {
+  return (
+    <div>
+      <div className="label mb-1">{label}</div>
+      <div className="text-ink font-medium">{valor}</div>
+    </div>
+  );
+}
+
+type FiltroHist = "todos" | "sanitario" | "pesaje" | "movimiento";
+const NODO: Record<string, { Icon: any; cls: string }> = {
+  alta: { Icon: PlusCircle, cls: "border-success/40 text-success bg-success/5" },
+  sanitario: { Icon: Syringe, cls: "border-warning/40 text-warning bg-warning/5" },
+  pesaje: { Icon: Scale, cls: "border-info/40 text-info bg-info/5" },
+  movimiento: { Icon: ArrowRightLeft, cls: "border-line text-ink-muted bg-bg-soft" },
+  alerta: { Icon: BellRing, cls: "border-warning/40 text-warning bg-warning/5" },
 };
+const FILTROS: { key: FiltroHist; label: string }[] = [
+  { key: "todos", label: "Todos" },
+  { key: "sanitario", label: "Sanidad" },
+  { key: "pesaje", label: "Pesos" },
+  { key: "movimiento", label: "Movimientos" },
+];
 
 function HistorialTimeline({
   animalId,
@@ -928,17 +984,18 @@ function HistorialTimeline({
   db: import("@/lib/types").DBShape;
   caravana: string;
 }) {
-  const items = historialDeAnimal(animalId, db);
+  const [filtro, setFiltro] = useState<FiltroHist>("todos");
+  const all = historialDeAnimal(animalId, db);
+  const items = filtro === "todos" ? all : all.filter((it) => it.tipo === filtro);
 
   function exportar() {
-    const filas = items.map((it) => ({
+    const filas = all.map((it) => ({
       fecha: it.fecha ?? new Date(it.fechaHora).toISOString().slice(0, 10),
       tipo: it.tipo,
       detalle: `${it.titulo}${it.detalle ? ` — ${it.detalle}` : ""}`.replace(/"/g, "'"),
     }));
-    const header = "fecha,tipo,detalle";
-    const cuerpo = filas.map((f) => `${f.fecha},${f.tipo},"${f.detalle}"`).join("\n");
-    const blob = new Blob([`﻿${header}\n${cuerpo}`], { type: "text/csv;charset=utf-8;" });
+    const csv = "fecha,tipo,detalle\n" + filas.map((f) => `${f.fecha},${f.tipo},"${f.detalle}"`).join("\n");
+    const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -951,37 +1008,63 @@ function HistorialTimeline({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <h4 className="font-display text-lg text-ink">Historial individual</h4>
-        {items.length > 0 && (
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="label">Filtros</span>
+          {FILTROS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setFiltro(f.key)}
+              className={`rounded-lg border px-3 py-1.5 text-xs transition ${
+                filtro === f.key
+                  ? "bg-accent text-white border-accent font-medium"
+                  : "border-line text-ink-muted hover:text-ink hover:bg-bg-soft"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        {all.length > 0 && (
           <button onClick={exportar} className="btn-ghost text-xs">
-            <Download size={13} /> Exportar historial
+            <Download size={13} /> Exportar
           </button>
         )}
       </div>
       {items.length === 0 ? (
-        <div className="text-sm text-ink-muted">Sin eventos registrados todavía.</div>
+        <div className="text-sm text-ink-muted py-4">Sin registros para este filtro.</div>
       ) : (
-        <ul className="space-y-2.5">
-          {items.map((it) => (
-            <li key={it.id} className="flex gap-3 text-sm">
-              <span className="text-lg leading-none">{ICONO_HISTORIAL[it.tipo] ?? "•"}</span>
-              <div className="flex-1 border-b border-line/50 pb-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-ink">{it.titulo}</span>
-                  <span className="text-ink-dim text-xs whitespace-nowrap">
-                    {it.fecha ?? new Date(it.fechaHora).toLocaleDateString()}
-                  </span>
+        <ul>
+          {items.map((it, i) => {
+            const nodo = NODO[it.tipo] ?? NODO.movimiento;
+            const Icon = nodo.Icon;
+            return (
+              <li key={it.id} className="relative flex gap-4 pb-4 last:pb-0">
+                <div className="relative flex flex-col items-center">
+                  <div className={`z-10 grid place-items-center w-9 h-9 rounded-lg border ${nodo.cls}`}>
+                    <Icon size={16} />
+                  </div>
+                  {i < items.length - 1 && (
+                    <span className="absolute top-9 bottom-0 w-px bg-line" />
+                  )}
                 </div>
-                {it.detalle && <div className="text-ink-muted text-xs mt-0.5">{it.detalle}</div>}
-                {it.estadoSincronizacion && it.estadoSincronizacion !== "sincronizado" && (
-                  <span className="inline-block mt-1 text-[10px] uppercase tracking-wide text-warning/80">
-                    {it.estadoSincronizacion}
-                  </span>
-                )}
-              </div>
-            </li>
-          ))}
+                <div className="flex-1 rounded-xl border border-line bg-bg-card p-3 -mt-0.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="font-heading text-ink text-sm">{it.titulo}</div>
+                    <span className="chip text-[11px] whitespace-nowrap">
+                      {it.fecha ?? new Date(it.fechaHora).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {it.detalle && <div className="text-sm text-ink-muted mt-1">{it.detalle}</div>}
+                  {it.estadoSincronizacion && it.estadoSincronizacion !== "sincronizado" && (
+                    <span className="inline-block mt-2 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-warning">
+                      {it.estadoSincronizacion}
+                    </span>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
