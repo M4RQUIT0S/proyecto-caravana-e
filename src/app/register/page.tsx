@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/Logo";
+import { OAuthButtons } from "@/components/OAuthButtons";
+import { PasswordChecklist, PasswordInput } from "@/components/PasswordInput";
 import { registrar } from "@/lib/auth";
+import { passwordValida } from "@/lib/password";
 import { useApp } from "@/lib/context";
 
 export default function RegisterPage() {
@@ -18,9 +21,17 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const passOk = passwordValida(password);
+  const coinciden = password === password2 && password2.length > 0;
+  const puedeEnviar = passOk && coinciden && email.length > 0 && username.length > 0;
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!passwordValida(password)) {
+      setError("La contraseña no cumple los requisitos de seguridad.");
+      return;
+    }
     if (password !== password2) {
       setError("Las contraseñas no coinciden.");
       return;
@@ -74,27 +85,21 @@ export default function RegisterPage() {
               placeholder="juanperez"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="label block mb-1.5">Contraseña</label>
-              <input
-                className="input"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="label block mb-1.5">Repetir</label>
-              <input
-                className="input"
-                type="password"
-                required
-                value={password2}
-                onChange={(e) => setPassword2(e.target.value)}
-              />
-            </div>
+          <div>
+            <label className="label block mb-1.5">Contraseña</label>
+            <PasswordInput value={password} onChange={setPassword} />
+            <PasswordChecklist value={password} />
+          </div>
+          <div>
+            <label className="label block mb-1.5">Repetir contraseña</label>
+            <PasswordInput
+              value={password2}
+              onChange={setPassword2}
+              autoComplete="new-password"
+            />
+            {password2.length > 0 && !coinciden && (
+              <p className="mt-1.5 text-sm text-error">Las contraseñas no coinciden.</p>
+            )}
           </div>
 
           {error && (
@@ -107,10 +112,17 @@ export default function RegisterPage() {
             </motion.div>
           )}
 
-          <button className="btn-primary w-full" disabled={loading}>
+          <button className="btn-primary w-full" disabled={loading || !puedeEnviar}>
             {loading ? "Creando…" : "Crear cuenta"}
           </button>
         </form>
+
+        <div className="my-6 flex items-center gap-3 text-ink-dim text-xs">
+          <div className="h-px flex-1 bg-line" />
+          <span>o registrate con</span>
+          <div className="h-px flex-1 bg-line" />
+        </div>
+        <OAuthButtons />
 
         <div className="divider my-7" />
         <p className="text-center text-sm text-ink-muted">

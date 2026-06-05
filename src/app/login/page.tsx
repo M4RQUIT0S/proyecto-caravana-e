@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/Logo";
+import { OAuthButtons } from "@/components/OAuthButtons";
+import { PasswordInput } from "@/components/PasswordInput";
 import { login } from "@/lib/auth";
 import { useApp } from "@/lib/context";
 
@@ -58,13 +60,16 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="label block mb-1.5">Contraseña</label>
-            <input
-              className="input"
-              type="password"
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="label">Contraseña</label>
+              <Link href="/recuperar" className="text-xs text-accent hover:underline">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+            <PasswordInput
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              onChange={setPassword}
+              autoComplete="current-password"
             />
           </div>
 
@@ -82,6 +87,13 @@ export default function LoginPage() {
             {loading ? "Entrando…" : "Entrar"}
           </button>
         </form>
+
+        <div className="my-6 flex items-center gap-3 text-ink-dim text-xs">
+          <div className="h-px flex-1 bg-line" />
+          <span>o continuá con</span>
+          <div className="h-px flex-1 bg-line" />
+        </div>
+        <OAuthButtons />
 
         <div className="divider my-7" />
         <p className="text-center text-sm text-ink-muted">

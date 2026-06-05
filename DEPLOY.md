@@ -12,6 +12,36 @@ El bot SIGSA (Playwright) **no corre en Vercel**: se despliega aparte (Docker/Cl
 3. **Authentication → Providers → Email**: para registro inmediato, desactivá
    *"Confirm email"*. (Si lo dejás activo, los usuarios deben confirmar por correo antes de entrar.)
 4. **Project Settings → API**: copiá `Project URL` y `anon public key`.
+5. **Authentication → URL Configuration**:
+   - *Site URL*: tu dominio de Vercel (ej. `https://agrotrace.vercel.app`).
+   - *Redirect URLs* (agregá ambos entornos): `http://localhost:3000/**` y
+     `https://TU-DOMINIO.vercel.app/**`. Esto habilita los retornos de `/auth/callback`
+     (login con Google/Apple) y `/restablecer` (link de recuperación de contraseña).
+
+### 1.1 Recuperación de contraseña (gratis, ya incluido)
+
+No requiere configuración extra: usa el envío de correos de Supabase Auth. El usuario pide el
+link en `/recuperar`, Supabase manda el mail (sólo si el correo existe — no revela si está
+registrado) y el link abre `/restablecer` para fijar la nueva contraseña.
+
+> El correo por defecto de Supabase tiene un límite bajo de envíos/hora en el plan free. Para
+> producción conviene configurar un **SMTP propio** en *Authentication → Emails → SMTP Settings*
+> (Resend/Brevo tienen capa gratis). Opcional; sin SMTP funciona igual con el límite del plan.
+
+### 1.2 Login con Google y Apple (opcional)
+
+Los botones ya están en `/login` y `/register`; sólo hay que habilitar cada proveedor en
+**Authentication → Providers**. Si un proveedor está deshabilitado, el botón muestra un aviso
+y no rompe nada.
+
+- **Google (gratis):** crear credenciales OAuth en Google Cloud Console
+  (*APIs & Services → Credentials → OAuth client ID → Web application*). Authorized redirect URI:
+  `https://TU-PROYECTO.supabase.co/auth/v1/callback`. Pegá *Client ID* y *Client secret* en el
+  proveedor Google de Supabase y activalo.
+- **Apple (requiere Apple Developer Program, USD 99/año):** necesita un *Services ID*, una *Key*
+  y el *Team ID* del Apple Developer Program (de pago). Cargá esos datos en el proveedor Apple de
+  Supabase. Si no tenés cuenta paga de Apple, dejá el proveedor **deshabilitado**: Google y el
+  registro por correo cubren el alta sin costo.
 
 ## 2. Variables de entorno
 
