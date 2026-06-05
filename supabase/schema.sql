@@ -6,6 +6,15 @@
 -- Ejecutar TODO el archivo en el SQL Editor de Supabase.
 -- ============================================================================
 
+-- ---------- schema privado para helpers internos ----------
+-- Las funciones SECURITY DEFINER usadas SÓLO por RLS/triggers viven acá, fuera del
+-- schema `public` que expone PostgREST. Así NO son llamables vía /rest/v1/rpc y se
+-- resuelven los lints 0028/0029 ("SECURITY DEFINER ejecutable por anon/authenticated"),
+-- sin perder la RLS: el rol que consulta necesita poder ejecutarlas, por eso se le da
+-- USAGE sobre el schema (no lo expone; sólo permite que la policy las invoque).
+create schema if not exists private;
+grant usage on schema private to anon, authenticated;
+
 -- ---------- profiles (espejo de auth.users con username) ----------
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
@@ -14,7 +23,7 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
-create or replace function public.handle_new_user()
+create or replace function private.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
   insert into public.profiles (id, username, email)
@@ -29,7 +38,7 @@ end; $$;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
-  after insert on auth.users for each row execute function public.handle_new_user();
+  after insert on auth.users for each row execute function private.handle_new_user();
 
 -- ---------- campos (establecimientos). miembros_uuids = espejo para RLS ----------
 create table if not exists public.campos (
@@ -43,7 +52,8 @@ create table if not exists public.campos (
 create index if not exists campos_miembros_idx on public.campos using gin (miembros_uuids);
 
 -- ---------- helpers de autorización (SECURITY DEFINER: evitan recursión RLS) ----------
-create or replace function public.is_campo_member(cid text)
+-- En schema `private` (no expuesto por la API). Las policies los invocan como private.*
+create or replace function private.is_campo_member(cid text)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from public.campos c
@@ -51,7 +61,7 @@ returns boolean language sql stable security definer set search_path = public as
   );
 $$;
 
-create or replace function public.can_write_campo(cid text)
+create or replace function private.can_write_campo(cid text)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.campos c where c.id = cid and c.owner_id = auth.uid())
   or exists (
@@ -63,6 +73,10 @@ returns boolean language sql stable security definer set search_path = public as
       and coalesce((m ->> 'activo')::boolean, true) = true
   );
 $$;
+
+-- La RLS evalúa estos helpers como el rol que consulta → necesita EXECUTE.
+grant execute on function private.is_campo_member(text) to anon, authenticated;
+grant execute on function private.can_write_campo(text) to anon, authenticated;
 
 -- ---------- tablas de datos (id text, campo_id text, data jsonb) ----------
 do $$ declare t text; begin
@@ -106,28 +120,28 @@ drop policy if exists profiles_upd on public.profiles;
 create policy profiles_upd on public.profiles for update using (id = auth.uid());
 
 drop policy if exists campos_sel on public.campos;
-create policy campos_sel on public.campos for select using (public.is_campo_member(id));
+create policy campos_sel on public.campos for select using (private.is_campo_member(id));
 drop policy if exists campos_ins on public.campos;
 create policy campos_ins on public.campos for insert with check (owner_id = auth.uid());
 drop policy if exists campos_upd on public.campos;
-create policy campos_upd on public.campos for update using (public.can_write_campo(id)) with check (public.can_write_campo(id));
+create policy campos_upd on public.campos for update using (private.can_write_campo(id)) with check (private.can_write_campo(id));
 drop policy if exists campos_del on public.campos;
 create policy campos_del on public.campos for delete using (owner_id = auth.uid());
 
 -- invitaciones: las ve el campo o el invitado (por su email); el invitado puede marcar la suya
 drop policy if exists inv_sel on public.invitaciones;
 create policy inv_sel on public.invitaciones for select using (
-  public.is_campo_member(campo_id) or lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  private.is_campo_member(campo_id) or lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
 );
 drop policy if exists inv_ins on public.invitaciones;
-create policy inv_ins on public.invitaciones for insert with check (public.can_write_campo(campo_id));
+create policy inv_ins on public.invitaciones for insert with check (private.can_write_campo(campo_id));
 drop policy if exists inv_upd on public.invitaciones;
 create policy inv_upd on public.invitaciones for update using (
-  public.can_write_campo(campo_id) or lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  private.can_write_campo(campo_id) or lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
 );
 drop policy if exists inv_del on public.invitaciones;
 create policy inv_del on public.invitaciones for delete using (
-  public.can_write_campo(campo_id) or lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  private.can_write_campo(campo_id) or lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
 );
 
 -- tablas de datos: SELECT si sos miembro; escribir si tenés permiso (rol <> vista)
@@ -138,9 +152,9 @@ do $$ declare t text; begin
   ] loop
     execute format('alter table public.%I enable row level security;', t);
     execute format('drop policy if exists %I on public.%I;', t || '_sel', t);
-    execute format('create policy %I on public.%I for select using (public.is_campo_member(campo_id));', t || '_sel', t);
+    execute format('create policy %I on public.%I for select using (private.is_campo_member(campo_id));', t || '_sel', t);
     execute format('drop policy if exists %I on public.%I;', t || '_mod', t);
-    execute format('create policy %I on public.%I for all using (public.can_write_campo(campo_id)) with check (public.can_write_campo(campo_id));', t || '_mod', t);
+    execute format('create policy %I on public.%I for all using (private.can_write_campo(campo_id)) with check (private.can_write_campo(campo_id));', t || '_mod', t);
   end loop;
 end $$;
 
@@ -193,6 +207,12 @@ begin
   return v_inv.campo_id;
 end; $$;
 
+-- email_for_username es intencionalmente anónima (login por username → resuelve el email).
+-- unirme/aceptar son sólo para usuarios autenticados: se les quita anon y PUBLIC para que
+-- no queden expuestas a anónimos por el grant por defecto de CREATE FUNCTION.
+revoke execute on function public.email_for_username(text) from public;
+revoke execute on function public.unirme_con_codigo(text) from public, anon;
+revoke execute on function public.aceptar_invitacion(text) from public, anon;
 grant execute on function public.email_for_username(text) to anon, authenticated;
 grant execute on function public.unirme_con_codigo(text) to authenticated;
 grant execute on function public.aceptar_invitacion(text) to authenticated;
@@ -208,7 +228,7 @@ grant execute on function public.aceptar_invitacion(text) to authenticated;
 --             según permisos granulares (capturar/sanidad/pesaje/movimiento); 'ver' siempre.
 --   usuario : niega {admin,catalogos}; el resto sí.
 --   admin/owner: todo. vista: nada.
-create or replace function public.member_permite(cid text, accion text)
+create or replace function private.member_permite(cid text, accion text)
 returns boolean language sql stable security definer set search_path = public as $$
   select
     exists (select 1 from public.campos c where c.id = cid and c.owner_id = auth.uid())
@@ -230,7 +250,7 @@ returns boolean language sql stable security definer set search_path = public as
             end
     );
 $$;
-grant execute on function public.member_permite(text, text) to authenticated;
+grant execute on function private.member_permite(text, text) to anon, authenticated;
 
 -- Tablas con escritura restringida por rol (no sólo rol<>vista). Se sustituye el
 -- `_mod` genérico (can_write_campo) por member_permite con la acción correspondiente,
@@ -248,7 +268,7 @@ begin
   ) as x(tabla, accion)) loop
     execute format('drop policy if exists %I on public.%I;', r.tabla || '_mod', r.tabla);
     execute format(
-      'create policy %I on public.%I for all using (public.member_permite(campo_id, %L)) with check (public.member_permite(campo_id, %L));',
+      'create policy %I on public.%I for all using (private.member_permite(campo_id, %L)) with check (private.member_permite(campo_id, %L));',
       r.tabla || '_mod', r.tabla, r.accion, r.accion);
   end loop;
 end $$;
@@ -256,8 +276,8 @@ end $$;
 -- eventos: el INSERT exige el permiso correspondiente al tipo (para operadores).
 drop policy if exists eventos_mod on public.eventos;
 create policy eventos_mod on public.eventos for all
-  using (public.can_write_campo(campo_id))
-  with check (public.member_permite(
+  using (private.can_write_campo(campo_id))
+  with check (private.member_permite(
     campo_id,
     case data ->> 'tipo'
       when 'sanitario' then 'sanidad'
@@ -270,5 +290,5 @@ create policy eventos_mod on public.eventos for all
 -- lecturas RFID: requieren permiso de captura.
 drop policy if exists lecturas_mod on public.lecturas;
 create policy lecturas_mod on public.lecturas for all
-  using (public.can_write_campo(campo_id))
-  with check (public.member_permite(campo_id, 'capturar'));
+  using (private.can_write_campo(campo_id))
+  with check (private.member_permite(campo_id, 'capturar'));
