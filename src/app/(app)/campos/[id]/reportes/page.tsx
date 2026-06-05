@@ -27,6 +27,7 @@ import {
 } from "@/lib/costos";
 import { proveedoresDe } from "@/lib/catalogos";
 import { hoy } from "@/lib/eventos";
+import { TonoBadge } from "@/components/Tono";
 import type { TipoCosto } from "@/lib/types";
 
 export default function ReportesPage() {
@@ -121,16 +122,16 @@ export default function ReportesPage() {
           <div className="flex items-center gap-2 mb-3">
             <TrendingDown size={18} className="text-warning" />
             <h3 className="font-display text-lg text-ink">Cola de tropa</h3>
-            <span className="chip text-xs">{resumen.colaDeTropa.length}</span>
+            <TonoBadge tono="warning">{resumen.colaDeTropa.length}</TonoBadge>
           </div>
           <p className="text-sm text-ink-muted mb-3">
             Animales que comen pero casi no ganan peso (ADPV bajo). Candidatos a revisar para reposición.
           </p>
           <div className="flex flex-wrap gap-2">
             {resumen.colaDeTropa.map((f) => (
-              <span key={f.animalId} className="chip text-xs">
-                <span className="font-mono text-accent">{f.caravana}</span> · {f.adpv} kg/d
-              </span>
+              <TonoBadge key={f.animalId} tono="warning">
+                <span className="font-mono">{f.caravana}</span> · {f.adpv} kg/d
+              </TonoBadge>
             ))}
           </div>
         </div>
