@@ -10,6 +10,7 @@ import { registrarMovimiento, hoy } from "@/lib/eventos";
 import { aptitud } from "@/lib/eventos";
 import { esActivo, estado } from "@/lib/reglas";
 import { useOnline } from "@/lib/conectividad";
+import { TonoBadge } from "@/components/Tono";
 import type { Movimiento } from "@/lib/types";
 
 export default function MovimientosPage() {
@@ -250,16 +251,16 @@ export default function MovimientosPage() {
           <ul className="space-y-3">
             {ultimosMovs.map((e) => (
               <li key={e.id} className="text-sm border-b border-line/50 pb-2 last:border-0">
-                <div className="text-ink capitalize">
-                  {e.subtipo} · {e.motivo}
-                  {e.animalesAfectados && (
-                    <span className="text-ink-dim text-xs"> ({e.animalesAfectados.length} animales)</span>
-                  )}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-ink capitalize">
+                    {e.subtipo} · {e.motivo}
+                    {e.animalesAfectados && (
+                      <span className="text-ink-dim text-xs"> ({e.animalesAfectados.length} animales)</span>
+                    )}
+                  </div>
+                  {e.requiereDTe && <TonoBadge tono="warning">DT-e</TonoBadge>}
                 </div>
-                <div className="text-ink-dim text-xs">
-                  {e.fecha}
-                  {e.requiereDTe ? " · requiere DT-e" : ""}
-                </div>
+                <div className="text-ink-dim text-xs">{e.fecha}</div>
               </li>
             ))}
           </ul>

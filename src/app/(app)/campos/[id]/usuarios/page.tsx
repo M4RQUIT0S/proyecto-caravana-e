@@ -8,6 +8,7 @@ import { useApp } from "@/lib/context";
 import { rolEnCampo } from "@/lib/auth";
 import { uid, update } from "@/lib/storage";
 import { RoleBadge } from "@/components/RoleBadge";
+import { TonoBadge } from "@/components/Tono";
 import { Modal } from "@/components/Modal";
 import { PERMISOS_OPERADOR_DEFAULT, ROL_LABEL } from "@/lib/permisos";
 import type { PermisosOperador, Rol } from "@/lib/types";
@@ -228,7 +229,7 @@ function Miembro({
           <div className="text-ink text-sm flex items-center gap-2">
             {username}
             {tag && <span className="chip text-[10px]">{tag}</span>}
-            {!activo && <span className="chip text-[10px] text-error">inactivo</span>}
+            {!activo && <TonoBadge tono="error">inactivo</TonoBadge>}
           </div>
           <div className="text-xs text-ink-dim">{email}</div>
         </div>

@@ -25,6 +25,7 @@ import { useApp } from "@/lib/context";
 import { rolEnCampo } from "@/lib/auth";
 import { uid, update } from "@/lib/storage";
 import { Modal } from "@/components/Modal";
+import { TonoBadge, type Tono } from "@/components/Tono";
 import { exportarAnimalesCSV, exportarAnimalesXLSX } from "@/lib/export";
 import {
   caravanaUnicaActiva,
@@ -298,7 +299,17 @@ export default function AnimalesPage() {
                       />
                     </div>
                   )}
-                  <div className="font-mono text-accent">{a.caravana}</div>
+                  <div className="font-mono text-accent flex items-center gap-2">
+                    {a.caravana}
+                    {(() => {
+                      const est = estadoAnimal(a);
+                      if (est === "activo") return null;
+                      const tono: Tono =
+                        est === "muerto" ? "error" : est === "egresado" ? "neutral" : "warning";
+                      const txt = est === "en_carencia" ? "carencia" : est;
+                      return <TonoBadge tono={tono} className="capitalize">{txt}</TonoBadge>;
+                    })()}
+                  </div>
                   <div className="text-ink">{a.nombre || "—"}</div>
                   <div className="text-ink-muted">{a.categoria || "—"}</div>
                   <div className="text-ink-muted">{a.raza || "—"}</div>
