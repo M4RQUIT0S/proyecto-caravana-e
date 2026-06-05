@@ -19,6 +19,15 @@ import { prepararDTe, documentosDe, type AnimalBloqueado } from "@/lib/dte";
 import { registrosPendientes, sincronizar, logsDe, type ResultadoSync } from "@/lib/sync";
 import { aptitud } from "@/lib/eventos";
 import { esActivo, estado } from "@/lib/reglas";
+import { TonoBadge, type Tono } from "@/components/Tono";
+
+// Mapeo de estados de registro/documento SENASA a tono semántico del design system.
+function tonoEstado(e: string): Tono {
+  if (["aceptado", "emitido", "sincronizado"].includes(e)) return "success";
+  if (["rechazado", "observado"].includes(e)) return "error";
+  if (["pendiente", "preparado"].includes(e)) return "info";
+  return "warning"; // local u otros
+}
 
 export default function SenasaPage() {
   const { id } = useParams<{ id: string }>();
@@ -166,7 +175,7 @@ function PrepararDTe({ campoId, onChange }: { campoId: string; onChange: () => v
             <div className="text-error font-medium mb-1 flex items-center gap-1.5">
               <XCircle size={15} /> Bloqueados por carencia/estado (RF-13)
             </div>
-            <ul className="text-red-200/90 text-xs space-y-0.5">
+            <ul className="text-error/80 text-xs space-y-0.5">
               {bloqueados.map((b) => (
                 <li key={b.animalId}>
                   <span className="font-mono">{b.caravana}</span>: {b.motivo}
@@ -199,7 +208,7 @@ function PrepararDTe({ campoId, onChange }: { campoId: string; onChange: () => v
                 <span className="text-ink">
                   DT-e · {d.cantidadAnimales} animales → {d.destino}
                 </span>
-                <span className="chip text-[10px] uppercase">{d.estado}</span>
+                <TonoBadge tono={tonoEstado(d.estado)} className="uppercase">{d.estado}</TonoBadge>
               </li>
             ))}
           </ul>
@@ -266,7 +275,7 @@ function Sincronizacion({
           {pendientes.slice(0, 8).map((p) => (
             <li key={p.id} className="flex items-center justify-between border-b border-line/50 pb-1.5 last:border-0">
               <span className="text-ink-muted">{p.descripcion}</span>
-              <span className="chip text-[10px] uppercase">{p.estado}</span>
+              <TonoBadge tono={tonoEstado(p.estado)} className="uppercase">{p.estado}</TonoBadge>
             </li>
           ))}
         </ul>
@@ -282,7 +291,7 @@ function Sincronizacion({
               <div className="text-sm text-error flex items-center gap-2 mb-1">
                 <XCircle size={15} /> {res.rechazados.length} rechazados
               </div>
-              <ul className="text-xs text-red-200/90 space-y-0.5">
+              <ul className="text-xs text-error/80 space-y-0.5">
                 {res.rechazados.map((r) => (
                   <li key={r.id}>
                     {r.descripcion}: <span className="text-error">{r.motivo}</span>
