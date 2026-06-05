@@ -60,29 +60,35 @@ export default function CampoResumen() {
           label="En carencia"
           value={enCarencia}
           href={`/campos/${id}/animales`}
-          accent={enCarencia > 0}
+          tono={enCarencia > 0 ? "warning" : undefined}
         />
         <Stat
           icon={RefreshCw}
           label="En cola (sync)"
           value={enCola}
           href={`/campos/${id}/senasa`}
-          accent={enCola > 0}
+          tono={enCola > 0 ? "info" : undefined}
         />
         <Stat
           icon={TrendingUp}
           label="ADPV promedio"
           value={adpvProm != null ? adpvProm : 0}
           href={`/campos/${id}/reportes`}
+          tono={adpvProm != null && adpvProm > 0 ? "success" : undefined}
         />
         <Stat icon={Users} label="Miembros" value={miembros} href={`/campos/${id}/usuarios`} />
-        <Stat icon={BellRing} label="Alertas activas" value={alertasActivas} accent={alertasActivas > 0} />
+        <Stat
+          icon={BellRing}
+          label="Alertas activas"
+          value={alertasActivas}
+          tono={alertasActivas > 0 ? "error" : undefined}
+        />
         <Stat
           icon={Bot}
           label="Pendientes SIGSA"
           value={sigsaPendientes}
           href={`/campos/${id}/sigsa`}
-          accent={sigsaPendientes > 0}
+          tono={sigsaPendientes > 0 ? "warning" : undefined}
         />
       </div>
 
@@ -152,28 +158,37 @@ export default function CampoResumen() {
   );
 }
 
+type Tono = "success" | "warning" | "error" | "info";
+
+const TONO: Record<Tono, { border: string; icon: string; dot: string }> = {
+  success: { border: "border-success/40", icon: "text-success", dot: "bg-success" },
+  warning: { border: "border-warning/40", icon: "text-warning", dot: "bg-warning" },
+  error: { border: "border-error/40", icon: "text-error", dot: "bg-error" },
+  info: { border: "border-info/40", icon: "text-info", dot: "bg-info" },
+};
+
 function Stat({
   icon: Icon,
   label,
   value,
   href,
-  accent,
+  tono,
 }: {
   icon: any;
   label: string;
   value: number;
   href?: string;
-  accent?: boolean;
+  tono?: Tono;
 }) {
+  const t = tono ? TONO[tono] : null;
   const inner = (
     <motion.div
       whileHover={{ y: -2 }}
-      className={`card p-4 transition ${
-        accent ? "border-accent/40" : "hover:border-accent/30"
-      }`}
+      className={`card p-4 transition ${t ? t.border : "hover:border-accent/30"}`}
     >
       <div className="flex items-center justify-between text-ink-dim">
-        <Icon size={16} className={accent ? "text-accent" : ""} />
+        <Icon size={16} className={t ? t.icon : ""} />
+        {t && <span className={`h-2 w-2 rounded-full ${t.dot}`} aria-hidden />}
       </div>
       <div className="font-display text-3xl text-ink mt-2 leading-none">{value}</div>
       <div className="text-xs text-ink-muted mt-1">{label}</div>
