@@ -10,6 +10,7 @@ import { registrarPesaje, ultimoPesaje, hoy } from "@/lib/eventos";
 import { calcularADPV, diasEntre, pesoFueraDeRango, rangoPesoCategoria } from "@/lib/reglas";
 import { useOnline } from "@/lib/conectividad";
 import { AnimalSelect } from "@/components/AnimalSelect";
+import { TonoBadge } from "@/components/Tono";
 import type { Pesaje } from "@/lib/types";
 
 export default function PesajesPage() {
@@ -202,13 +203,15 @@ export default function PesajesPage() {
               const a = db.animales.find((x) => x.id === e.animalId);
               return (
                 <li key={e.id} className="text-sm border-b border-line/50 pb-2 last:border-0">
-                  <div className="text-ink">
-                    {e.pesoKg} kg <span className="font-mono text-accent text-xs">{a?.caravana}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-ink">
+                      {e.pesoKg} kg <span className="font-mono text-accent text-xs">{a?.caravana}</span>
+                    </div>
+                    {e.fueraDeRango && <TonoBadge tono="warning">Fuera de rango</TonoBadge>}
                   </div>
                   <div className="text-ink-dim text-xs">
                     {e.fecha}
                     {e.adpv != null ? ` · ADPV ${e.adpv} kg/día` : ""}
-                    {e.fueraDeRango ? " · fuera de rango" : ""}
                   </div>
                 </li>
               );

@@ -11,6 +11,7 @@ import { registrarSanitario, hoy } from "@/lib/eventos";
 import { calcularFinCarencia } from "@/lib/reglas";
 import { useOnline } from "@/lib/conectividad";
 import { AnimalSelect } from "@/components/AnimalSelect";
+import { TonoBadge } from "@/components/Tono";
 import type { EventoSanitario } from "@/lib/types";
 
 export default function SanidadPage() {
@@ -248,16 +249,19 @@ export default function SanidadPage() {
               const a = db.animales.find((x) => x.id === e.animalId);
               return (
                 <li key={e.id} className="text-sm border-b border-line/50 pb-2 last:border-0">
-                  <div className="text-ink">
-                    {e.productoNombre || "Evento"}{" "}
-                    <span className="font-mono text-accent text-xs">{a?.caravana}</span>
-                    {e.animalesAfectados && e.animalesAfectados.length > 1 && (
-                      <span className="text-ink-dim text-xs"> +{e.animalesAfectados.length - 1}</span>
-                    )}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-ink">
+                      {e.productoNombre || "Evento"}{" "}
+                      <span className="font-mono text-accent text-xs">{a?.caravana}</span>
+                      {e.animalesAfectados && e.animalesAfectados.length > 1 && (
+                        <span className="text-ink-dim text-xs"> +{e.animalesAfectados.length - 1}</span>
+                      )}
+                    </div>
+                    {e.fechaFinCarencia && <TonoBadge tono="warning">Carencia</TonoBadge>}
                   </div>
                   <div className="text-ink-dim text-xs">
                     {e.fecha}
-                    {e.fechaFinCarencia ? ` · carencia hasta ${e.fechaFinCarencia}` : ""}
+                    {e.fechaFinCarencia ? ` · hasta ${e.fechaFinCarencia}` : ""}
                   </div>
                 </li>
               );
