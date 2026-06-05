@@ -203,6 +203,11 @@ grant execute on function public.aceptar_invitacion(text) to authenticated;
 -- Devuelve si el usuario actual puede ejecutar `accion` en el campo `cid`.
 -- owner/admin/usuario: roles operativos plenos. operador: sólo sus permisos.
 -- vista: nada.
+-- Espejo EXACTO de `puede()` en src/lib/permisos.ts:
+--   operador: niega {costos,reportes,senasa,documentacion,catalogos,admin}; el resto
+--             según permisos granulares (capturar/sanidad/pesaje/movimiento); 'ver' siempre.
+--   usuario : niega {admin,catalogos}; el resto sí.
+--   admin/owner: todo. vista: nada.
 create or replace function public.member_permite(cid text, accion text)
 returns boolean language sql stable security definer set search_path = public as $$
   select
@@ -215,12 +220,38 @@ returns boolean language sql stable security definer set search_path = public as
         and coalesce((m ->> 'activo')::boolean, true) = true
         and case coalesce(m ->> 'rol', 'vista')
               when 'vista' then false
-              when 'operador' then coalesce((m -> 'permisos' ->> accion)::boolean, false)
+              when 'operador' then case
+                  when accion in ('costos','reportes','senasa','documentacion','catalogos','admin') then false
+                  when accion = 'ver' then true
+                  else coalesce((m -> 'permisos' ->> accion)::boolean, false)
+                end
+              when 'usuario' then accion not in ('admin','catalogos')
               else true
             end
     );
 $$;
 grant execute on function public.member_permite(text, text) to authenticated;
+
+-- Tablas con escritura restringida por rol (no sólo rol<>vista). Se sustituye el
+-- `_mod` genérico (can_write_campo) por member_permite con la acción correspondiente,
+-- cerrando el escalado del Operador delegado vía API directa (RN21).
+do $$
+declare r record;
+begin
+  for r in (select * from (values
+    ('costos','costos'),
+    ('documentos','documentacion'),
+    ('sincronizaciones','senasa'),
+    ('catalogos','catalogos'),
+    ('productos','catalogos'),
+    ('proveedores','catalogos')
+  ) as x(tabla, accion)) loop
+    execute format('drop policy if exists %I on public.%I;', r.tabla || '_mod', r.tabla);
+    execute format(
+      'create policy %I on public.%I for all using (public.member_permite(campo_id, %L)) with check (public.member_permite(campo_id, %L));',
+      r.tabla || '_mod', r.tabla, r.accion, r.accion);
+  end loop;
+end $$;
 
 -- eventos: el INSERT exige el permiso correspondiente al tipo (para operadores).
 drop policy if exists eventos_mod on public.eventos;
