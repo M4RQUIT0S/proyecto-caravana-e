@@ -25,13 +25,26 @@ create table if not exists public.profiles (
 
 create or replace function private.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  base_username text;
+  try_username text;
+  n int := 0;
 begin
+  -- username del metadata (registro propio) o derivado del email (Google/Apple).
+  base_username := coalesce(
+    nullif(trim(new.raw_user_meta_data ->> 'username'), ''),
+    nullif(split_part(new.email, '@', 1), ''),
+    'usuario'
+  );
+  try_username := base_username;
+  -- profiles.username es UNIQUE: si choca (típico en OAuth por el local-part del mail),
+  -- agregamos un sufijo numérico para no abortar la creación del usuario de auth.
+  while exists (select 1 from public.profiles where lower(username) = lower(try_username)) loop
+    n := n + 1;
+    try_username := base_username || n::text;
+  end loop;
   insert into public.profiles (id, username, email)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data ->> 'username', split_part(new.email, '@', 1)),
-    new.email
-  )
+  values (new.id, try_username, new.email)
   on conflict (id) do nothing;
   return new;
 end; $$;
