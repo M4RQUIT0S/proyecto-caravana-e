@@ -33,50 +33,165 @@ function normalizarClave(h: string): string {
     .replace(/\s+/g, "_");
 }
 
-// Sinónimos de columnas → campo canónico. Cubre exportaciones de software de tacto/RFID
-// (Tru-Test/Datamars, etc.) además de los encabezados simples en español/inglés.
-const ALIAS_COLUMNA: Record<string, string> = {
-  numero_de_etiqueta: "caravana",
-  numero_etiqueta: "caravana",
-  nro_de_etiqueta: "caravana",
-  nro_etiqueta: "caravana",
-  n_de_caravana: "caravana",
-  numero_de_caravana: "caravana",
-  etiqueta: "caravana",
-  tag: "caravana",
-  vid: "caravana",
-  id_electronico: "eid",
-  identificacion_electronica: "eid",
-  numero_electronico: "eid",
-  electronic_id: "eid",
-  name: "nombre",
-  sex: "sexo",
-  genero: "sexo",
-  breed: "raza",
-  categoria_ok: "categoria",
-  category: "categoria",
-  fecha_de_nacimiento: "fecha_nacimiento",
-  nacimiento: "fecha_nacimiento",
-  birth_date: "fecha_nacimiento",
-  peso_kg: "peso",
-  kg: "peso",
-  notas: "observaciones",
-  notes: "observaciones",
-  obs: "observaciones",
-  observacion: "observaciones",
+// Resolución inteligente de columnas: en vez de exigir nombres exactos, puntúa cada
+// encabezado contra cada campo canónico (palabras clave que suman / que descalifican).
+// Así tolera archivos desordenados (tacto/RFID, planillas propias, español/inglés) y
+// evita trampas como "Madre ID electrónico" o "Triple Fecha de caducidad".
+interface CampoSpec {
+  campo: string;
+  exacto: string[]; // header normalizado idéntico → match fuerte
+  incluye: string[]; // subcadenas que suman puntaje
+  excluye: string[]; // subcadenas que descalifican la columna para este campo
+}
+
+const CAMPOS_SPEC: CampoSpec[] = [
+  {
+    campo: "caravana",
+    exacto: ["caravana", "numero_de_etiqueta", "numero_etiqueta", "nro_etiqueta", "nro_de_etiqueta", "etiqueta", "numero_de_caravana", "vid", "rp", "nro", "arete", "crotal", "chapa", "tag"],
+    incluye: ["etiqueta", "caravana", "arete", "crotal", "chapa", "tag", "visual"],
+    excluye: ["madre", "mother", "padre", "electronico", "electronic", "rfid", "eid", "lote", "dosis", "caducidad", "treated", "fecha", "time", "grupo"],
+  },
+  {
+    campo: "eid",
+    exacto: ["eid", "rfid", "id_electronico", "identificacion_electronica", "numero_electronico", "electronic_id", "id_rfid"],
+    incluye: ["electronico", "electronic", "rfid", "eid"],
+    excluye: ["madre", "mother", "padre", "visual", "etiqueta", "lote"],
+  },
+  {
+    campo: "nombre",
+    exacto: ["nombre", "name"],
+    incluye: ["nombre"],
+    excluye: ["lote", "usuario", "producto", "madre", "archivo", "etiqueta", "numero"],
+  },
+  {
+    campo: "sexo",
+    exacto: ["sexo", "sex", "genero"],
+    incluye: ["sexo", "genero"],
+    excluye: [],
+  },
+  {
+    campo: "raza",
+    exacto: ["raza", "breed", "biotipo"],
+    incluye: ["raza", "breed", "biotipo"],
+    excluye: [],
+  },
+  {
+    campo: "categoria",
+    exacto: ["categoria", "categoria_ok", "category", "clasificacion"],
+    incluye: ["categoria", "category", "clasific"],
+    excluye: ["destete", "fecha"],
+  },
+  {
+    campo: "fecha_nacimiento",
+    exacto: ["fecha_nacimiento", "fecha_de_nacimiento", "nacimiento", "birth_date", "fnac", "dob"],
+    incluye: ["nacimiento", "birth"],
+    excluye: ["caducidad", "vacun", "tacto"],
+  },
+  {
+    campo: "peso",
+    exacto: ["peso", "weight", "peso_kg", "kg", "kilos"],
+    incluye: ["peso", "weight", "kilo"],
+    excluye: ["dosis"],
+  },
+  {
+    campo: "observaciones",
+    exacto: ["observaciones", "observacion", "notas", "nota", "notes", "obs", "comentarios"],
+    incluye: ["observ", "nota", "coment"],
+    excluye: [],
+  },
+];
+
+function puntaje(header: string, spec: CampoSpec): number {
+  for (const ex of spec.excluye) if (header.includes(ex)) return -1;
+  if (spec.exacto.includes(header)) return 100;
+  let s = 0;
+  for (const kw of spec.incluye) if (header.includes(kw)) s = Math.max(s, kw.length);
+  return s;
+}
+
+// Devuelve el mapa campoCanónico → encabezado de origen, asignando cada encabezado a un
+// solo campo (greedy por mejor puntaje) para no robar columnas entre campos.
+export function resolverColumnas(headers: string[]): Record<string, string> {
+  const candidatos: { campo: string; header: string; score: number }[] = [];
+  for (const spec of CAMPOS_SPEC)
+    for (const h of headers) {
+      const sc = puntaje(h, spec);
+      if (sc > 0) candidatos.push({ campo: spec.campo, header: h, score: sc });
+    }
+  candidatos.sort((a, b) => b.score - a.score);
+  const mapa: Record<string, string> = {};
+  const usados = new Set<string>();
+  for (const c of candidatos) {
+    if (mapa[c.campo] || usados.has(c.header)) continue;
+    mapa[c.campo] = c.header;
+    usados.add(c.header);
+  }
+  return mapa;
+}
+
+// Infiere el sexo a partir del texto de la categoría cuando no hay columna de sexo.
+// "Ternero H" → H, "Vaca/Vaquillona/Novilla" → H, "Toro/Novillo/Ternero" → M.
+function inferSexoDeCategoria(cat: string): "M" | "H" | undefined {
+  const s = cat.toLowerCase();
+  if (/\bh\b/.test(s) || /hembra|vaca|vaquillona|vaquilla|novilla|ternera/.test(s)) return "H";
+  if (/\bm\b/.test(s) || /macho|toro|novillo|torito|ternero/.test(s)) return "M";
+  return undefined;
+}
+
+function headersDe(rows: CsvRow[]): string[] {
+  const set = new Set<string>();
+  for (const r of rows.slice(0, 30)) for (const k of Object.keys(r)) set.add(k);
+  return Array.from(set);
+}
+
+// Aplica el mapeo resuelto a cada fila: completa los campos canónicos desde sus columnas
+// de origen e infiere lo que falte (sexo desde categoría). No pisa valores ya presentes.
+function aplicarMapeo(rows: CsvRow[]): CsvRow[] {
+  if (rows.length === 0) return rows;
+  const mapa = resolverColumnas(headersDe(rows));
+  return rows.map((row) => {
+    const out: CsvRow = { ...row };
+    for (const [campo, header] of Object.entries(mapa)) {
+      const v = row[header];
+      const actual = out[campo];
+      if (v != null && String(v).trim() !== "" && (actual == null || String(actual).trim() === "")) {
+        out[campo] = v;
+      }
+    }
+    if ((out.sexo == null || String(out.sexo).trim() === "") && out.categoria) {
+      const inf = inferSexoDeCategoria(String(out.categoria));
+      if (inf) out.sexo = inf;
+    }
+    return out;
+  });
+}
+
+// Resumen legible de qué columna del archivo alimentó cada campo (para la vista previa).
+const ETIQUETA_CAMPO: Record<string, string> = {
+  caravana: "Caravana",
+  eid: "ID electrónico",
+  nombre: "Nombre",
+  sexo: "Sexo",
+  raza: "Raza",
+  categoria: "Categoría",
+  fecha_nacimiento: "Fecha de nacimiento",
+  peso: "Peso",
+  observaciones: "Observaciones",
 };
 
-// Copia los valores de columnas con nombre alternativo al campo canónico (sin pisar uno ya cargado).
-function canonicalizar(row: CsvRow): CsvRow {
-  const out: CsvRow = { ...row };
-  for (const [src, canon] of Object.entries(ALIAS_COLUMNA)) {
-    const actual = out[canon];
-    if (actual == null || String(actual).trim() === "") {
-      const v = row[src];
-      if (v != null && String(v).trim() !== "") out[canon] = v;
-    }
-  }
-  return out;
+export interface MapeoCampo {
+  campo: string;
+  etiqueta: string;
+  columna: string;
+}
+
+export function resumenMapeo(rows: CsvRow[]): MapeoCampo[] {
+  const mapa = resolverColumnas(headersDe(rows));
+  return Object.entries(mapa).map(([campo, columna]) => ({
+    campo,
+    etiqueta: ETIQUETA_CAMPO[campo] ?? campo,
+    columna,
+  }));
 }
 
 export function parseCSV(text: string): CsvRow[] {
@@ -85,7 +200,7 @@ export function parseCSV(text: string): CsvRow[] {
     skipEmptyLines: true,
     transformHeader: normalizarClave,
   });
-  return (parsed.data ?? []).filter(Boolean).map(canonicalizar);
+  return aplicarMapeo((parsed.data ?? []).filter(Boolean));
 }
 
 export function readFileAsText(file: File): Promise<string> {
@@ -112,14 +227,15 @@ export function parseXLSX(buf: ArrayBuffer): CsvRow[] {
   if (!firstSheet) return [];
   const ws = wb.Sheets[firstSheet];
   const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: "" });
-  return rows.map((row) => {
+  const normalizadas = rows.map((row) => {
     const out: CsvRow = {};
     for (const k of Object.keys(row)) {
       const norm = normalizarClave(k);
       out[norm] = typeof row[k] === "string" ? row[k].trim() : row[k];
     }
-    return canonicalizar(out);
+    return out;
   });
+  return aplicarMapeo(normalizadas);
 }
 
 export async function parseFile(file: File): Promise<CsvRow[]> {

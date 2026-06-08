@@ -23,6 +23,7 @@ import {
   nombreBaseSinExtension,
   sugerirLote,
   crearLoteParaImport,
+  resumenMapeo,
   type CsvRow,
   type SugerenciaLote,
 } from "@/lib/csv";
@@ -82,7 +83,9 @@ export default function ImportarPage() {
           antes de confirmar.
         </p>
         <p className="text-sm text-ink-muted mt-2">
-          Columnas reconocidas:{" "}
+          El sistema <strong className="text-ink">reconoce las columnas automáticamente</strong>{" "}
+          aunque estén desordenadas o con otros nombres (“Número de etiqueta”, “ID
+          electrónico”, “Categoria OK”, etc.) y deduce lo que falte. Campos que detecta:{" "}
           <code className="font-mono text-accent">caravana</code> (o{" "}
           <code className="font-mono text-accent">rfid</code> /{" "}
           <code className="font-mono text-accent">eid</code> /{" "}
@@ -479,6 +482,7 @@ function Preview({
   onConfirm: (datos: SugerenciaLote) => void;
 }) {
   const sugerencia = sugerirLote(rows, baseNombre);
+  const mapeo = resumenMapeo(rows);
   const [nombre, setNombre] = useState(sugerencia.nombre);
   const [categoria, setCategoria] = useState(sugerencia.categoria);
   const [raza, setRaza] = useState(sugerencia.raza);
@@ -569,6 +573,33 @@ function Preview({
         <p className="text-[11px] text-ink-dim mt-3">
           Si ya existe un lote con este nombre, se le sumará un sufijo automático
           ({"“"}({"2"}){"”"}, {"“"}({"3"}){"”"}…) para mantenerlos separados.
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-line bg-bg-soft/40 p-4">
+        <div className="font-display text-sm text-ink mb-2">
+          Campos detectados automáticamente
+        </div>
+        {mapeo.length === 0 ? (
+          <p className="text-xs text-error">
+            No se reconoció ninguna columna. Revisá que el archivo tenga al menos una
+            columna de caravana/etiqueta.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {mapeo.map((m) => (
+              <span key={m.campo} className="chip gap-1.5">
+                <span className="text-ink font-medium">{m.etiqueta}</span>
+                <span className="text-ink-dim">←</span>
+                <span className="font-mono text-accent">{m.columna}</span>
+              </span>
+            ))}
+          </div>
+        )}
+        <p className="text-[11px] text-ink-dim mt-3">
+          El sexo se deduce de la categoría cuando el archivo no lo trae (ej. “Ternero H”
+          → hembra). Las columnas de vacunas/tratamientos se registran como eventos
+          sanitarios.
         </p>
       </div>
 
