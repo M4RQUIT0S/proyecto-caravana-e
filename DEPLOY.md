@@ -28,20 +28,20 @@ registrado) y el link abre `/restablecer` para fijar la nueva contraseña.
 > producción conviene configurar un **SMTP propio** en *Authentication → Emails → SMTP Settings*
 > (Resend/Brevo tienen capa gratis). Opcional; sin SMTP funciona igual con el límite del plan.
 
-### 1.2 Login con Google y Apple (opcional)
+### 1.2 Login con Google (opcional, gratis)
 
-Los botones ya están en `/login` y `/register`; sólo hay que habilitar cada proveedor en
-**Authentication → Providers**. Si un proveedor está deshabilitado, el botón muestra un aviso
-y no rompe nada.
+El botón "Continuar con Google" ya está en `/login` y `/register`; sólo hay que habilitar el
+proveedor en **Authentication → Providers**. Si está deshabilitado, el botón muestra un aviso y
+no rompe nada.
 
 - **Google (gratis):** crear credenciales OAuth en Google Cloud Console
   (*APIs & Services → Credentials → OAuth client ID → Web application*). Authorized redirect URI:
   `https://TU-PROYECTO.supabase.co/auth/v1/callback`. Pegá *Client ID* y *Client secret* en el
   proveedor Google de Supabase y activalo.
-- **Apple (requiere Apple Developer Program, USD 99/año):** necesita un *Services ID*, una *Key*
-  y el *Team ID* del Apple Developer Program (de pago). Cargá esos datos en el proveedor Apple de
-  Supabase. Si no tenés cuenta paga de Apple, dejá el proveedor **deshabilitado**: Google y el
-  registro por correo cubren el alta sin costo.
+
+> Apple se quitó del front a propósito (requiere Apple Developer Program de pago, USD 99/año).
+> Google + el registro por correo cubren el alta sin costo. `iniciarOAuth` quedó preparado por si
+> se reincorpora más adelante.
 
 ## 2. Variables de entorno
 
