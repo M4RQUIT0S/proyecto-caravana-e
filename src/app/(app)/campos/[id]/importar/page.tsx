@@ -51,6 +51,7 @@ export default function ImportarPage() {
     agregados: number;
     actualizados: number;
     omitidos: number;
+    eventos: number;
     loteNombre: string;
   } | null>(null);
 
@@ -65,7 +66,7 @@ export default function ImportarPage() {
 
   function aplicar(rows: CsvRow[], datosLote: SugerenciaLote) {
     const lote = crearLoteParaImport(id, datosLote);
-    const r = importarAnimales(id, rows, { loteId: lote.id });
+    const r = importarAnimales(id, rows, { loteId: lote.id, usuarioId: user!.id });
     setResultado({ ...r, loteNombre: lote.nombre });
     setPreview(null);
     refresh();
@@ -94,6 +95,14 @@ export default function ImportarPage() {
           <code className="font-mono">weight</code>),{" "}
           <code className="font-mono">fecha_nacimiento</code>,{" "}
           <code className="font-mono">observaciones</code>.
+        </p>
+        <p className="text-sm text-ink-muted mt-2">
+          Si el archivo trae columnas de vacunas/tratamientos (grupos tipo{" "}
+          <code className="font-mono">Triple</code>,{" "}
+          <code className="font-mono">Triple Dosis</code>,{" "}
+          <code className="font-mono">Triple Treated</code>…), se registran como{" "}
+          <strong className="text-ink">eventos sanitarios</strong> en cada animal y
+          aparecen en <strong className="text-ink">Sanidad</strong> y en su historial.
         </p>
       </div>
 
@@ -151,6 +160,13 @@ export default function ImportarPage() {
                 {" — "}
                 {resultado.agregados} agregados · {resultado.actualizados}{" "}
                 actualizados · {resultado.omitidos} omitidos
+                {resultado.eventos > 0 && (
+                  <>
+                    {" · "}
+                    <strong className="text-ink">{resultado.eventos}</strong> eventos
+                    sanitarios
+                  </>
+                )}
               </div>
             </div>
           </div>

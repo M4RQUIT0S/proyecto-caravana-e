@@ -2,7 +2,7 @@
 
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import type { Animal, Lote } from "./types";
+import type { Animal, EventoSanitario, Lote } from "./types";
 import { loadDB, uid, update } from "./storage";
 
 export interface CsvRow {
@@ -206,21 +206,72 @@ function normalizarSexo(v: unknown): "M" | "H" | undefined {
   return undefined;
 }
 
+// ----- Eventos sanitarios desde columnas de tratamiento (vacunas/antiparasitarios) -----
+// Archivos de tacto/RFID traen grupos de columnas por producto:
+//   "<Producto>", "<Producto> Dosis", "<Producto> Número de lote",
+//   "<Producto> Fecha de caducidad", "<Producto> Treated".
+// Detectamos cada grupo por su columna "..._treated" y generamos un evento por animal tratado.
+
+function parseFechaISO(v: unknown): string | undefined {
+  const s = String(v ?? "").trim();
+  if (!s) return undefined;
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); // YYYY-MM-DD
+  if (m) return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
+  m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/); // DD-MM-YYYY o DD/MM/YYYY
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  return undefined;
+}
+
+function esAfirmativo(v: unknown): boolean {
+  const s = String(v ?? "").trim().toLowerCase();
+  return s === "yes" || s === "si" || s === "sí" || s === "y" || s === "true" || s === "1";
+}
+
+function tituloProducto(base: string): string {
+  return base
+    .split("_")
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
+interface GrupoTratamiento {
+  base: string;
+  nombre: string;
+}
+
+export function detectarTratamientos(rows: CsvRow[]): GrupoTratamiento[] {
+  const keys = new Set<string>();
+  for (const r of rows.slice(0, 30)) for (const k of Object.keys(r)) keys.add(k);
+  const grupos: GrupoTratamiento[] = [];
+  const vistos = new Set<string>();
+  for (const k of keys) {
+    if (!k.endsWith("_treated")) continue;
+    const base = k.slice(0, -"_treated".length);
+    if (!base || vistos.has(base)) continue;
+    vistos.add(base);
+    grupos.push({ base, nombre: tituloProducto(base) });
+  }
+  return grupos;
+}
+
 export interface ImportResult {
   agregados: number;
   actualizados: number;
   omitidos: number;
+  eventos: number;
 }
 
 export function importarAnimales(
   campoId: string,
   rows: CsvRow[],
-  opts: { loteId?: string } = {}
+  opts: { loteId?: string; usuarioId?: string } = {}
 ): ImportResult {
   let agregados = 0;
   let actualizados = 0;
   let omitidos = 0;
+  let eventos = 0;
   const now = Date.now();
+  const grupos = detectarTratamientos(rows);
   update((db) => {
     for (const row of rows) {
       const caravana = String(row.caravana ?? row.rfid ?? row.eid ?? row.id ?? "").trim();
@@ -247,12 +298,15 @@ export function importarAnimales(
         observaciones: row.observaciones ? String(row.observaciones) : undefined,
         loteId: opts.loteId,
       };
+      let animalId: string;
       if (existente) {
         Object.assign(existente, datos, { updatedAt: now });
+        animalId = existente.id;
         actualizados++;
       } else {
+        animalId = uid("a_");
         db.animales.push({
-          id: uid("a_"),
+          id: animalId,
           campoId,
           loteId: opts.loteId,
           caravana,
@@ -266,7 +320,46 @@ export function importarAnimales(
         } as Animal);
         agregados++;
       }
+
+      // Eventos sanitarios desde columnas de tratamiento (vacunas/antiparasitarios).
+      if (opts.usuarioId && grupos.length) {
+        const fechaFila = parseFechaISO(row.fecha);
+        for (const g of grupos) {
+          const baseVal = row[g.base];
+          const fechaProducto = parseFechaISO(baseVal);
+          const aplicado = esAfirmativo(row[`${g.base}_treated`]) || fechaProducto != null;
+          if (!aplicado) continue;
+          const fecha = fechaProducto ?? fechaFila;
+          // Evitar duplicar al reimportar el mismo archivo.
+          const dup = db.eventos.some(
+            (e) =>
+              e.tipo === "sanitario" &&
+              e.animalId === animalId &&
+              (e as EventoSanitario).productoNombre === g.nombre &&
+              e.fecha === fecha
+          );
+          if (dup) continue;
+          const dosisNum = Number(row[`${g.base}_dosis`]);
+          db.eventos.push({
+            id: uid("ev_"),
+            tipo: "sanitario",
+            campoId,
+            animalId,
+            usuarioId: opts.usuarioId,
+            fechaHora: now,
+            fecha,
+            observacion: "Importado desde archivo",
+            estadoSincronizacion: "local",
+            activo: true,
+            createdAt: now,
+            productoNombre: g.nombre,
+            dosis: Number.isFinite(dosisNum) && dosisNum > 0 ? dosisNum : undefined,
+            diasCarencia: 0,
+          } as EventoSanitario);
+          eventos++;
+        }
+      }
     }
   });
-  return { agregados, actualizados, omitidos };
+  return { agregados, actualizados, omitidos, eventos };
 }
