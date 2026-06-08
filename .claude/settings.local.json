@@ -3,7 +3,20 @@
     "allow": [
       "Bash(npm install *)",
       "Bash(npx tsc *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(node *)",
+      "Bash(Out-String)",
+      "Bash(npx next *)",
+      "Bash(npx tsx *)",
+      "Bash(git add *)",
+      "Bash(git commit -m '@ *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(grep -iE \"deploy|\\\\.md$\")",
+      "Bash(npx eslint *)",
+      "Bash(npm view *)",
+      "Bash(npx vercel *)",
+      "Bash(git checkout *)"
     ]
   }
 }
