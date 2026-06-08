@@ -95,11 +95,9 @@ export async function login(identificador: string, password: string): Promise<Au
   return user ? { ok: true, user } : { ok: false, error: "No se pudo iniciar la sesión." };
 }
 
-// Login con proveedor externo (Google / Apple). Redirige al proveedor y vuelve a
+// Login con proveedor externo (Google). Redirige al proveedor y vuelve a
 // /auth/callback, donde se completa el intercambio del code por la sesión.
-export async function iniciarOAuth(
-  provider: "google" | "apple"
-): Promise<SimpleResult> {
+export async function iniciarOAuth(provider: "google" = "google"): Promise<SimpleResult> {
   if (!supabaseConfigurado())
     return { ok: false, error: "Falta configurar Supabase (variables de entorno)." };
   const sb = supabase();
@@ -112,10 +110,7 @@ export async function iniciarOAuth(
   if (error) {
     const m = error.message.toLowerCase();
     if (m.includes("provider is not enabled"))
-      return {
-        ok: false,
-        error: `El inicio de sesión con ${provider === "google" ? "Google" : "Apple"} no está habilitado todavía.`,
-      };
+      return { ok: false, error: "El inicio de sesión con Google no está habilitado todavía." };
     return { ok: false, error: traducir(error.message) };
   }
   return { ok: true };

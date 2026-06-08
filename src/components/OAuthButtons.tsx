@@ -27,25 +27,17 @@ function GoogleIcon() {
   );
 }
 
-function AppleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 384 512" aria-hidden fill="currentColor">
-      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C61.4 141.5 9.4 178.3 9.4 250.6c0 21.4 3.9 43.5 11.8 66.3 10.5 30.3 48.3 104.7 87.7 103.5 20.6-.5 35.2-14.6 62-14.6 26 0 39.5 14.6 62.4 14.6 39.8-.6 74-68.2 84-98.6-53.4-25.2-50.6-73.8-50.6-75.1zm-56.6-144.5c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
-    </svg>
-  );
-}
-
 export function OAuthButtons() {
-  const [loading, setLoading] = useState<"google" | "apple" | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function entrar(provider: "google" | "apple") {
+  async function entrar() {
     setError(null);
-    setLoading(provider);
-    const r = await iniciarOAuth(provider);
+    setLoading(true);
+    const r = await iniciarOAuth("google");
     if (!r.ok) {
       setError(r.error);
-      setLoading(null);
+      setLoading(false);
     }
     // En caso de éxito el navegador redirige al proveedor; no reseteamos el loading.
   }
@@ -54,25 +46,14 @@ export function OAuthButtons() {
     <div className="space-y-3">
       <button
         type="button"
-        onClick={() => entrar("google")}
-        disabled={loading !== null}
+        onClick={entrar}
+        disabled={loading}
         className="btn-ghost w-full justify-center gap-2.5"
       >
         <GoogleIcon />
-        {loading === "google" ? "Conectando…" : "Continuar con Google"}
+        {loading ? "Conectando…" : "Continuar con Google"}
       </button>
-      <button
-        type="button"
-        onClick={() => entrar("apple")}
-        disabled={loading !== null}
-        className="btn-ghost w-full justify-center gap-2.5"
-      >
-        <AppleIcon />
-        {loading === "apple" ? "Conectando…" : "Continuar con Apple"}
-      </button>
-      {error && (
-        <p className="text-sm text-error text-center">{error}</p>
-      )}
+      {error && <p className="text-sm text-error text-center">{error}</p>}
     </div>
   );
 }
