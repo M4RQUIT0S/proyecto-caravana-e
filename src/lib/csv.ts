@@ -22,13 +22,70 @@ export interface CsvRow {
   [key: string]: any;
 }
 
+// Normaliza un encabezado: sin acentos, minúsculas, espacios → "_".
+// Así "Número de etiqueta" → "numero_de_etiqueta", "ID electrónico" → "id_electronico".
+function normalizarClave(h: string): string {
+  return h
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+}
+
+// Sinónimos de columnas → campo canónico. Cubre exportaciones de software de tacto/RFID
+// (Tru-Test/Datamars, etc.) además de los encabezados simples en español/inglés.
+const ALIAS_COLUMNA: Record<string, string> = {
+  numero_de_etiqueta: "caravana",
+  numero_etiqueta: "caravana",
+  nro_de_etiqueta: "caravana",
+  nro_etiqueta: "caravana",
+  n_de_caravana: "caravana",
+  numero_de_caravana: "caravana",
+  etiqueta: "caravana",
+  tag: "caravana",
+  vid: "caravana",
+  id_electronico: "eid",
+  identificacion_electronica: "eid",
+  numero_electronico: "eid",
+  electronic_id: "eid",
+  name: "nombre",
+  sex: "sexo",
+  genero: "sexo",
+  breed: "raza",
+  categoria_ok: "categoria",
+  category: "categoria",
+  fecha_de_nacimiento: "fecha_nacimiento",
+  nacimiento: "fecha_nacimiento",
+  birth_date: "fecha_nacimiento",
+  peso_kg: "peso",
+  kg: "peso",
+  notas: "observaciones",
+  notes: "observaciones",
+  obs: "observaciones",
+  observacion: "observaciones",
+};
+
+// Copia los valores de columnas con nombre alternativo al campo canónico (sin pisar uno ya cargado).
+function canonicalizar(row: CsvRow): CsvRow {
+  const out: CsvRow = { ...row };
+  for (const [src, canon] of Object.entries(ALIAS_COLUMNA)) {
+    const actual = out[canon];
+    if (actual == null || String(actual).trim() === "") {
+      const v = row[src];
+      if (v != null && String(v).trim() !== "") out[canon] = v;
+    }
+  }
+  return out;
+}
+
 export function parseCSV(text: string): CsvRow[] {
   const parsed = Papa.parse<CsvRow>(text, {
     header: true,
     skipEmptyLines: true,
-    transformHeader: (h) => h.trim().toLowerCase().replace(/\s+/g, "_"),
+    transformHeader: normalizarClave,
   });
-  return (parsed.data ?? []).filter(Boolean);
+  return (parsed.data ?? []).filter(Boolean).map(canonicalizar);
 }
 
 export function readFileAsText(file: File): Promise<string> {
@@ -58,10 +115,10 @@ export function parseXLSX(buf: ArrayBuffer): CsvRow[] {
   return rows.map((row) => {
     const out: CsvRow = {};
     for (const k of Object.keys(row)) {
-      const norm = k.trim().toLowerCase().replace(/\s+/g, "_");
+      const norm = normalizarClave(k);
       out[norm] = typeof row[k] === "string" ? row[k].trim() : row[k];
     }
-    return out;
+    return canonicalizar(out);
   });
 }
 
@@ -140,6 +197,15 @@ export function crearLoteParaImport(
   return lote;
 }
 
+// Acepta M/H, Male/Female, Macho/Hembra, Toro/Vaca/Vaquillona, etc.
+function normalizarSexo(v: unknown): "M" | "H" | undefined {
+  const s = String(v ?? "").trim().toLowerCase();
+  if (!s) return undefined;
+  if (s.startsWith("m") || s.startsWith("t")) return "M"; // male, macho, m, toro
+  if (s.startsWith("h") || s.startsWith("f") || s.startsWith("v")) return "H"; // hembra, female, f, h, vaca, vaquillona
+  return undefined;
+}
+
 export interface ImportResult {
   agregados: number;
   actualizados: number;
@@ -168,7 +234,7 @@ export function importarAnimales(
       const datos: Partial<Animal> = {
         caravana,
         nombre: row.nombre ? String(row.nombre) : undefined,
-        sexo: row.sexo === "M" || row.sexo === "H" ? row.sexo : undefined,
+        sexo: normalizarSexo(row.sexo),
         raza: row.raza ? String(row.raza) : undefined,
         categoria: row.categoria ? String(row.categoria) : undefined,
         fechaNacimiento: row.fecha_nacimiento ? String(row.fecha_nacimiento) : undefined,
