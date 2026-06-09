@@ -41,13 +41,11 @@ export async function registrar(input: {
 
   const sb = supabase();
 
-  // Username único (la columna profiles.username es unique; chequeamos antes para un mensaje claro).
-  const { data: existente } = await sb
-    .from("profiles")
-    .select("id")
-    .ilike("username", username)
-    .maybeSingle();
-  if (existente) return { ok: false, error: "Ese nombre de usuario ya está tomado." };
+  // Username único (la columna profiles.username es unique; chequeamos antes para un mensaje
+  // claro). Se usa la RPC `username_disponible` (booleana) en vez de un SELECT a profiles:
+  // así el registro anónimo no puede leer ni enumerar los emails de la tabla.
+  const { data: disponible } = await sb.rpc("username_disponible", { p_username: username });
+  if (disponible === false) return { ok: false, error: "Ese nombre de usuario ya está tomado." };
 
   const { data, error } = await sb.auth.signUp({
     email,
