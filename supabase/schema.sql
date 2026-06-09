@@ -125,8 +125,19 @@ alter table public.profiles enable row level security;
 alter table public.campos enable row level security;
 alter table public.invitaciones enable row level security;
 
+-- profiles SELECT: cada quien ve su propio perfil y el de los co-miembros de sus
+-- campos (para mostrar nombres). NO se expone la tabla entera (evita el dump masivo
+-- de emails/usernames a cualquier usuario o anónimo). La disponibilidad de username
+-- en el registro se resuelve con la RPC `username_disponible` (booleana).
 drop policy if exists profiles_sel on public.profiles;
-create policy profiles_sel on public.profiles for select using (true);
+create policy profiles_sel on public.profiles for select using (
+  id = auth.uid()
+  or exists (
+    select 1 from public.campos c
+    where (c.owner_id = auth.uid() or auth.uid() = any (c.miembros_uuids))
+      and (profiles.id = c.owner_id or profiles.id = any (c.miembros_uuids))
+  )
+);
 drop policy if exists profiles_ins on public.profiles;
 create policy profiles_ins on public.profiles for insert with check (id = auth.uid());
 drop policy if exists profiles_upd on public.profiles;
@@ -180,6 +191,15 @@ returns text language sql stable security definer set search_path = public as $$
   select email from public.profiles where lower(username) = lower(p_username) limit 1;
 $$;
 
+-- Disponibilidad de username para el registro. Devuelve SÓLO un booleano: a diferencia
+-- de un SELECT directo sobre profiles, no permite enumerar ni leer emails.
+create or replace function public.username_disponible(p_username text)
+returns boolean language sql stable security definer set search_path = public as $$
+  select not exists (
+    select 1 from public.profiles where lower(username) = lower(trim(p_username))
+  );
+$$;
+
 -- Unirse a un campo con su código (el invitado todavía no puede leer el campo por RLS).
 create or replace function public.unirme_con_codigo(p_codigo text)
 returns text language plpgsql security definer set search_path = public as $$
@@ -189,6 +209,8 @@ begin
   if v.id is null then return 'NO_ENCONTRADO'; end if;
   if v.owner_id = auth.uid() then return 'YA_OWNER'; end if;
   if auth.uid() = any (v.miembros_uuids) then return 'YA_MIEMBRO'; end if;
+  -- Flujo confiable: habilita el cambio de membresía pese a la guardia anti-escalada.
+  perform set_config('app.campos_guard_bypass', 'on', true);
   update public.campos set
     miembros_uuids = array_append(miembros_uuids, auth.uid()),
     data = jsonb_set(data, '{miembros}',
@@ -208,6 +230,8 @@ begin
   if v_inv.id is null then return 'NO_ENCONTRADO'; end if;
   if lower(v_inv.email) <> lower(coalesce(auth.jwt() ->> 'email', '')) then return 'NO_AUTORIZADO'; end if;
   v_rol := coalesce(v_inv.data ->> 'rol', 'vista');
+  -- Flujo confiable: habilita el cambio de membresía pese a la guardia anti-escalada.
+  perform set_config('app.campos_guard_bypass', 'on', true);
   update public.campos set
     miembros_uuids = case when auth.uid() = any (miembros_uuids) then miembros_uuids
                           else array_append(miembros_uuids, auth.uid()) end,
@@ -224,9 +248,11 @@ end; $$;
 -- unirme/aceptar son sólo para usuarios autenticados: se les quita anon y PUBLIC para que
 -- no queden expuestas a anónimos por el grant por defecto de CREATE FUNCTION.
 revoke execute on function public.email_for_username(text) from public;
+revoke execute on function public.username_disponible(text) from public;
 revoke execute on function public.unirme_con_codigo(text) from public, anon;
 revoke execute on function public.aceptar_invitacion(text) from public, anon;
 grant execute on function public.email_for_username(text) to anon, authenticated;
+grant execute on function public.username_disponible(text) to anon, authenticated;
 grant execute on function public.unirme_con_codigo(text) to authenticated;
 grant execute on function public.aceptar_invitacion(text) to authenticated;
 
@@ -305,3 +331,56 @@ drop policy if exists lecturas_mod on public.lecturas;
 create policy lecturas_mod on public.lecturas for all
   using (private.can_write_campo(campo_id))
   with check (private.member_permite(campo_id, 'capturar'));
+
+-- ============================================================================
+-- Guardia anti-escalada de privilegios sobre `campos`
+-- ============================================================================
+-- La policy campos_upd permite escribir a cualquier miembro con rol <> vista, y el
+-- rol/permisos de cada miembro viven dentro de `data->miembros`. Sin esta guardia, un
+-- miembro `usuario`/`operador` podía: (a) auto-promoverse de rol o concederse permisos
+-- reescribiendo `data->miembros`, o (b) robar el campo seteando `owner_id = auth.uid()`.
+-- El trigger restringe owner_id, codigo y la membresía SÓLO al dueño actual; las RPCs
+-- de unión (SECURITY DEFINER) activan un bypass local de transacción para sus updates.
+create or replace function private.guard_campos_membership()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  -- Rol del que llama según el estado PREVIO (old): un usuario/operador no puede
+  -- declararse admin en el mismo UPDATE para saltearse el control.
+  caller_is_admin boolean := exists (
+    select 1
+    from jsonb_array_elements(coalesce(old.data -> 'miembros', '[]'::jsonb)) m
+    where (m ->> 'userId')::uuid = auth.uid()
+      and coalesce((m ->> 'activo')::boolean, true) = true
+      and coalesce(m ->> 'rol', 'vista') = 'admin'
+  );
+begin
+  -- Flujos confiables (unirme_con_codigo / aceptar_invitacion) marcan este GUC.
+  if coalesce(current_setting('app.campos_guard_bypass', true), '') = 'on' then
+    return new;
+  end if;
+  -- El dueño actual del campo puede cambiar cualquier cosa.
+  if old.owner_id = auth.uid() then
+    return new;
+  end if;
+  -- La transferencia de titularidad es SÓLO del dueño (ni siquiera un admin la hace).
+  if new.owner_id is distinct from old.owner_id then
+    raise exception 'No autorizado: sólo el dueño del campo puede transferir la titularidad';
+  end if;
+  -- Cambiar código o la lista de miembros requiere rol admin (o dueño). Esto cierra la
+  -- escalada del usuario/operador que reescribía data->miembros para auto-promoverse.
+  if not caller_is_admin then
+    if new.codigo is distinct from old.codigo
+       or new.miembros_uuids is distinct from old.miembros_uuids
+       or coalesce(new.data -> 'miembros', '[]'::jsonb)
+            is distinct from coalesce(old.data -> 'miembros', '[]'::jsonb)
+    then
+      raise exception 'No autorizado: modificar la membresía requiere rol de dueño o admin';
+    end if;
+  end if;
+  return new;
+end; $$;
+
+drop trigger if exists campos_guard_membership on public.campos;
+create trigger campos_guard_membership
+  before update on public.campos for each row
+  execute function private.guard_campos_membership();

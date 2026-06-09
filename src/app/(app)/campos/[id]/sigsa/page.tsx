@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useApp } from "@/lib/context";
 import { rolEnCampo } from "@/lib/auth";
+import { supabase, supabaseConfigurado } from "@/lib/supabase/client";
 import { Modal } from "@/components/Modal";
 import {
   borrarCredencialesAfip,
@@ -434,9 +435,16 @@ function LoteSigsaCard({
       // (Cloud Run / Docker) y se apunta su URL con NEXT_PUBLIC_BOT_URL. Sin esa
       // variable, usa la ruta interna (sólo sirve fuera de Vercel).
       const botBase = (process.env.NEXT_PUBLIC_BOT_URL ?? "").replace(/\/$/, "");
+      // El endpoint del bot exige un JWT de Supabase (no es un proxy abierto a AFIP).
+      const token = supabaseConfigurado()
+        ? (await supabase().auth.getSession()).data.session?.access_token ?? ""
+        : "";
       const res = await fetch(`${botBase}/api/sigsa/declarar`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           cuit: afip.cuit,
           clave: afip.clave,

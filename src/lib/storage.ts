@@ -72,7 +72,15 @@ export function uid(prefix = ""): string {
 
 export function codigoCampo(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  // Código de acceso a un campo → se genera con CSPRNG (no Math.random, predecible).
+  const cryptoObj = typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
   let s = "";
-  for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  if (cryptoObj?.getRandomValues) {
+    const buf = new Uint32Array(6);
+    cryptoObj.getRandomValues(buf);
+    for (let i = 0; i < 6; i++) s += chars[buf[i] % chars.length];
+  } else {
+    for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  }
   return s;
 }

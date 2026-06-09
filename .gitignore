@@ -11,3 +11,11 @@ dist
 .vercel
 
 notas.md
+
+# IDE local (IntelliJ/WebStorm) — no se versiona
+.idea/
+
+# Directorios temporales de scripts/pruebas
+.dbtmp/
+.t*/
+.verify*/
