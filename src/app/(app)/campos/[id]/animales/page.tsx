@@ -36,38 +36,8 @@ import {
 } from "@/lib/reglas";
 import { validarAltaCoherencia, historialDeAnimal, aptitud } from "@/lib/eventos";
 import { estado as estadoAnimal } from "@/lib/reglas";
+import { RAZAS, CATEGORIAS } from "@/lib/clasificacion";
 import type { Animal, Alerta } from "@/lib/types";
-
-// Razas/biotipos disponibles en el desplegable del formulario de animal.
-const RAZAS = [
-  "Angus",
-  "Hereford",
-  "Shorthorn",
-  "Limousin",
-  "Charolais",
-  "Fleckvieh / Simmental",
-  "Limangus",
-  "Brangus",
-  "Braford",
-  "Brahman",
-  "Bonsmara",
-  "Holando Argentino",
-  "Jersey",
-  "Pardo Suizo",
-  "Wagyu",
-  "Búfalo",
-];
-
-// Categorías disponibles en el desplegable del formulario de animal.
-const CATEGORIAS = [
-  "Ternero/a",
-  "Novillito",
-  "Novillo",
-  "Macho entero joven (MEJ)",
-  "Toro",
-  "Vaquillona",
-  "Vaca",
-];
 
 export default function AnimalesPage() {
   const { id } = useParams<{ id: string }>();

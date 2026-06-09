@@ -8,6 +8,7 @@ import { Layers, Plus, Trash2 } from "lucide-react";
 import { useApp } from "@/lib/context";
 import { rolEnCampo } from "@/lib/auth";
 import { uid, update } from "@/lib/storage";
+import { RAZAS, CATEGORIAS } from "@/lib/clasificacion";
 import { Modal } from "@/components/Modal";
 
 export default function LotesPage() {
@@ -164,21 +165,33 @@ function NuevoLoteModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label block mb-1.5">Categoría</label>
-            <input
+            <select
               className="input"
               value={categoria}
               onChange={(e) => setCategoria(e.target.value)}
-              placeholder="Vacas, Vaquillonas…"
-            />
+            >
+              <option value="">— Elegí una categoría —</option>
+              {CATEGORIAS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="label block mb-1.5">Raza</label>
-            <input
+            <select
               className="input"
               value={raza}
               onChange={(e) => setRaza(e.target.value)}
-              placeholder="Angus, Hereford…"
-            />
+            >
+              <option value="">— Elegí una raza —</option>
+              {RAZAS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
         <div>
