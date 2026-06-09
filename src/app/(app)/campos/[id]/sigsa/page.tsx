@@ -230,10 +230,13 @@ function AfipModal({
 
   useEffect(() => {
     if (open) {
+      // Reset del formulario al abrir el modal: setState-in-effect es el patrón correcto acá.
+      /* eslint-disable react-hooks/set-state-in-effect */
       setCuit(actual ? formatCuit(actual.cuit) : "");
       setClave(actual?.clave ?? "");
       setVerClave(false);
       setErr(null);
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [open, actual]);
 

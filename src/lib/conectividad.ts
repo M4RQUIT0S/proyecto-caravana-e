@@ -14,6 +14,8 @@ export function useOnline(): boolean {
     const off = () => setOnline(false);
     window.addEventListener("online", on);
     window.addEventListener("offline", off);
+    // Sincroniza el estado real de conectividad al montar (puede haber cambiado antes del mount).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOnline(navigator.onLine);
     return () => {
       window.removeEventListener("online", on);

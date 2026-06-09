@@ -394,7 +394,10 @@ function AnimalFormModal({
 
   useEffect(() => {
     if (open) {
+      // Reset del formulario al abrir el modal: setState-in-effect es el patrón correcto acá.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(formInicial());
+       
       setErr(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

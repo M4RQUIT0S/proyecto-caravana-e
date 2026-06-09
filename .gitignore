@@ -8,11 +8,14 @@ dist
 *.log
 .vercel
 
-.vercel
+# Artefactos de build de TypeScript/Next
+tsconfig.tsbuildinfo
+next-env.d.ts
 
+# Notas locales (no se versionan)
 notas.md
 
-# IDE local (IntelliJ/WebStorm) — no se versiona
+# IDE local (IntelliJ/WebStorm)
 .idea/
 
 # Directorios temporales de scripts/pruebas
