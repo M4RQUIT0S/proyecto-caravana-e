@@ -30,6 +30,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Actualizaciones optimistas locales (cada saveDB dispara 'caravanas:update').
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
     const handler = () => refresh();
     window.addEventListener("caravanas:update", handler);
@@ -44,6 +45,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     activarSync();
     if (!supabaseConfigurado()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
       return;
     }

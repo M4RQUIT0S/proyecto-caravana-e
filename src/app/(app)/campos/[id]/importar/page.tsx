@@ -488,8 +488,12 @@ function Preview({
   const [raza, setRaza] = useState(sugerencia.raza);
 
   useEffect(() => {
+    // Sincroniza la sugerencia derivada hacia el estado editable cuando cambian las filas.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNombre(sugerencia.nombre);
+     
     setCategoria(sugerencia.categoria);
+     
     setRaza(sugerencia.raza);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseNombre, rows]);
