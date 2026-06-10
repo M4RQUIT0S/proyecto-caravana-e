@@ -205,12 +205,26 @@ export async function pushDiff(prev: DBShape, next: DBShape): Promise<void> {
 // inserta antes que sus animales, por la FK y el chequeo de membresía).
 let registrado = false;
 let cola: Promise<void> = Promise.resolve();
+let pendientes = 0;
+
+// True mientras haya pushes locales en vuelo. La re-hidratación en segundo plano lo
+// consulta para no pisar cambios optimistas que todavía no llegaron a Supabase.
+export function syncOcupado(): boolean {
+  return pendientes > 0;
+}
+
 export function activarSync(): void {
   if (registrado) return;
   registrado = true;
   setSyncHook((prev, next) => {
-    cola = cola.then(() => pushDiff(prev, next)).catch((e) => {
-      console.error("[supabase] cola de sync:", e);
-    });
+    pendientes++;
+    cola = cola
+      .then(() => pushDiff(prev, next))
+      .catch((e) => {
+        console.error("[supabase] cola de sync:", e);
+      })
+      .finally(() => {
+        pendientes--;
+      });
   });
 }
