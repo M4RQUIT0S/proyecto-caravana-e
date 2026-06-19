@@ -4,7 +4,9 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Layers, Tags, Users, BellRing, Copy, Bot, Clock, RefreshCw, TrendingUp } from "lucide-react";
+import { Layers, Tags, Users, BellRing, Copy, Bot, Clock, RefreshCw, TrendingUp, LayoutDashboard, ScanLine, Upload, Check } from "lucide-react";
+import { useState } from "react";
+import { PageHeader } from "@/components/PageHeader";
 import { useApp } from "@/lib/context";
 import { totalPendientes } from "@/lib/sigsa";
 import { contarPendientes, esActivo, estaEnCarencia } from "@/lib/reglas";
@@ -46,12 +48,34 @@ export default function CampoResumen() {
     return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
   }, [animales]);
 
+  const [copiado, setCopiado] = useState(false);
   function copiarCodigo() {
     navigator.clipboard.writeText(campo.codigo);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
   }
 
   return (
     <div className="space-y-8">
+      <PageHeader
+        icon={LayoutDashboard}
+        eyebrow="Resumen del campo"
+        title={campo.nombre}
+        subtitle="Un vistazo rápido a tu rodeo. Tocá cualquier tarjeta para ver el detalle de esa sección."
+        actions={
+          <>
+            <Link href={`/campos/${id}/importar`} className="btn-ghost text-sm">
+              <Upload size={15} /> Cargar animales
+            </Link>
+            <Link href={`/campos/${id}/manga`} className="btn-primary text-sm">
+              <ScanLine size={15} /> Capturar en manga
+            </Link>
+          </>
+        }
+      />
+
+      <section>
+        <h2 className="label mb-3">Estado del rodeo</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         <Stat icon={Tags} label="Animales" value={animales.length} href={`/campos/${id}/animales`} />
         <Stat icon={Layers} label="Lotes" value={lotes.length} href={`/campos/${id}/lotes`} />
@@ -91,6 +115,7 @@ export default function CampoResumen() {
           tono={sigsaPendientes > 0 ? "warning" : undefined}
         />
       </div>
+      </section>
 
       <section className="card p-5">
         <div className="flex items-center justify-between mb-4">
@@ -150,7 +175,15 @@ export default function CampoResumen() {
             {campo.codigo}
           </code>
           <button onClick={copiarCodigo} className="btn-ghost text-sm">
-            <Copy size={14} /> Copiar
+            {copiado ? (
+              <>
+                <Check size={14} className="text-success" /> Copiado
+              </>
+            ) : (
+              <>
+                <Copy size={14} /> Copiar
+              </>
+            )}
           </button>
         </div>
       </section>

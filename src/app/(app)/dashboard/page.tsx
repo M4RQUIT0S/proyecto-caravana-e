@@ -34,6 +34,7 @@ export default function DashboardPage() {
   return (
     <GlobalShell>
       <PageHeader
+        icon={MapPin}
         eyebrow={`Hola, ${user?.username ?? ""}`}
         title="Tus campos"
         subtitle="Acá ves los campos donde sos administrador o miembro. Crear un campo te asigna el rol de admin automáticamente."
@@ -55,10 +56,13 @@ export default function DashboardPage() {
           animate={{ opacity: 1 }}
           className="card p-10 text-center"
         >
-          <MapPin className="mx-auto mb-3 text-ink-dim" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 text-accent ring-1 ring-accent/15">
+            <MapPin size={26} />
+          </div>
           <div className="font-display text-xl text-ink">Todavía no tenés campos</div>
-          <p className="text-ink-muted text-sm mt-1">
-            Creá tu primer campo o unite con un código que te hayan compartido.
+          <p className="text-ink-muted text-sm mt-1 max-w-sm mx-auto leading-relaxed">
+            Un campo es tu establecimiento ganadero. Creá el primero para empezar a cargar
+            animales, o unite a uno con el código que te haya compartido un administrador.
           </p>
           <div className="flex justify-center gap-2 mt-5">
             <button onClick={() => setOpenJoin(true)} className="btn-ghost text-sm">
