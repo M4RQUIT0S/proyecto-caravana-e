@@ -103,7 +103,9 @@ export async function iniciarOAuth(provider: "google" = "google"): Promise<Simpl
     typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
   const { error } = await sb.auth.signInWithOAuth({
     provider,
-    options: { redirectTo },
+    // prompt=select_account fuerza a Google a mostrar siempre el selector de
+    // cuenta, en vez de entrar directo con la única sesión activa del navegador.
+    options: { redirectTo, queryParams: { prompt: "select_account" } },
   });
   if (error) {
     const m = error.message.toLowerCase();
