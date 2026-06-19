@@ -35,20 +35,41 @@ import { useOnline } from "@/lib/conectividad";
 import { contarPendientes } from "@/lib/reglas";
 import { puede, permisosDe, type Accion } from "@/lib/permisos";
 
-const items: { href: string; label: string; icon: any; perm?: Accion }[] = [
-  { href: "", label: "Resumen", icon: LayoutDashboard },
-  { href: "/manga", label: "Manga", icon: ScanLine, perm: "capturar" },
-  { href: "/animales", label: "Animales", icon: Tags },
-  { href: "/lotes", label: "Lotes", icon: Layers },
-  { href: "/sanidad", label: "Sanidad", icon: Syringe, perm: "sanidad" },
-  { href: "/pesajes", label: "Pesajes", icon: Scale, perm: "pesaje" },
-  { href: "/movimientos", label: "Movimientos", icon: ArrowRightLeft, perm: "movimiento" },
-  { href: "/reportes", label: "Reportes", icon: BarChart3, perm: "reportes" },
-  { href: "/senasa", label: "SENASA", icon: ShieldCheck, perm: "senasa" },
-  { href: "/catalogos", label: "Catálogos", icon: BookMarked, perm: "catalogos" },
-  { href: "/usuarios", label: "Usuarios", icon: Users },
-  { href: "/importar", label: "Importar", icon: Upload },
-  { href: "/sigsa", label: "Bot SIGSA", icon: Bot },
+type NavItem = { href: string; label: string; icon: any; perm?: Accion };
+type NavGroup = { titulo: string; items: NavItem[] };
+
+const grupos: NavGroup[] = [
+  {
+    titulo: "General",
+    items: [{ href: "", label: "Resumen", icon: LayoutDashboard }],
+  },
+  {
+    titulo: "Día a día",
+    items: [
+      { href: "/manga", label: "Manga", icon: ScanLine, perm: "capturar" },
+      { href: "/animales", label: "Animales", icon: Tags },
+      { href: "/lotes", label: "Lotes", icon: Layers },
+      { href: "/sanidad", label: "Sanidad", icon: Syringe, perm: "sanidad" },
+      { href: "/pesajes", label: "Pesajes", icon: Scale, perm: "pesaje" },
+      { href: "/movimientos", label: "Movimientos", icon: ArrowRightLeft, perm: "movimiento" },
+    ],
+  },
+  {
+    titulo: "Trazabilidad",
+    items: [
+      { href: "/reportes", label: "Reportes", icon: BarChart3, perm: "reportes" },
+      { href: "/senasa", label: "SENASA", icon: ShieldCheck, perm: "senasa" },
+      { href: "/sigsa", label: "Bot SIGSA", icon: Bot },
+    ],
+  },
+  {
+    titulo: "Administración",
+    items: [
+      { href: "/catalogos", label: "Catálogos", icon: BookMarked, perm: "catalogos" },
+      { href: "/usuarios", label: "Usuarios", icon: Users },
+      { href: "/importar", label: "Importar", icon: Upload },
+    ],
+  },
 ];
 
 export default function CampoLayout({ children }: { children: React.ReactNode }) {
@@ -89,7 +110,12 @@ export default function CampoLayout({ children }: { children: React.ReactNode })
 
   const miembro = campo.miembros.find((m) => m.userId === user?.id);
   const permisos = permisosDe(miembro);
-  const visibles = items.filter((t) => !t.perm || puede(rol, t.perm, permisos));
+  const gruposVisibles = grupos
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((t) => !t.perm || puede(rol, t.perm, permisos)),
+    }))
+    .filter((g) => g.items.length > 0);
   const misCampos = db.campos.filter(
     (c) => c.ownerId === user?.id || c.miembros.some((m) => m.userId === user?.id)
   );
@@ -103,28 +129,35 @@ export default function CampoLayout({ children }: { children: React.ReactNode })
   }
 
   const nav = (
-    <nav className="flex flex-col gap-0.5 p-3">
-      {visibles.map((t) => {
-        const Icon = t.icon;
-        const full = `/campos/${campo!.id}${t.href}`;
-        const active =
-          t.href === "" ? pathname === `/campos/${campo!.id}` : pathname?.startsWith(full);
-        return (
-          <Link
-            key={t.href}
-            href={full}
-            onClick={() => setNavOpen(false)}
-            className={`inline-flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
-              active
-                ? "bg-accent text-white font-medium shadow-sm"
-                : "text-ink-muted hover:bg-bg-soft hover:text-ink"
-            }`}
-          >
-            <Icon size={17} className="shrink-0" />
-            {t.label}
-          </Link>
-        );
-      })}
+    <nav className="flex flex-col gap-5 p-3">
+      {gruposVisibles.map((g) => (
+        <div key={g.titulo} className="flex flex-col gap-0.5">
+          <div className="px-3 pb-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-ink-dim">
+            {g.titulo}
+          </div>
+          {g.items.map((t) => {
+            const Icon = t.icon;
+            const full = `/campos/${campo!.id}${t.href}`;
+            const active =
+              t.href === "" ? pathname === `/campos/${campo!.id}` : pathname?.startsWith(full);
+            return (
+              <Link
+                key={t.href}
+                href={full}
+                onClick={() => setNavOpen(false)}
+                className={`inline-flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                  active
+                    ? "bg-accent text-white font-medium shadow-sm"
+                    : "text-ink-muted hover:bg-bg-soft hover:text-ink"
+                }`}
+              >
+                <Icon size={17} className="shrink-0" />
+                {t.label}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   );
 
