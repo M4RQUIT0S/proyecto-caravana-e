@@ -92,7 +92,7 @@ export default function PesajesPage() {
       ok: true,
       text:
         adpvPreview != null
-          ? `Pesaje registrado. ADPV ${adpvPreview} kg/día (RN13).`
+          ? `Pesaje registrado. ADPV ${adpvPreview} kg/día.`
           : "Pesaje registrado (primer pesaje del animal).",
     });
     setPeso("");
@@ -108,7 +108,7 @@ export default function PesajesPage() {
         </div>
         {!online && (
           <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
-            Sin conexión: el pesaje se guarda local y sincroniza después (RNF-01).
+            Sin conexión: el pesaje se guarda local y sincroniza después.
           </div>
         )}
 
@@ -156,14 +156,14 @@ export default function PesajesPage() {
         {adpvPreview != null && (
           <div className="rounded-xl border border-info/30 bg-info/5 px-3 py-2.5 text-sm text-info flex items-center gap-2">
             <TrendingUp size={15} />
-            ADPV estimado: {adpvPreview} kg/día respecto al pesaje anterior (RN13).
+            ADPV estimado: {adpvPreview} kg/día respecto al pesaje anterior.
           </div>
         )}
 
         {fuera && peso && (
           <div className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2.5 text-sm text-warning flex items-center gap-2">
             <AlertTriangle size={15} />
-            Peso fuera del rango esperado para la categoría (RN08). Verificá antes de confirmar.
+            Peso fuera del rango esperado para la categoría. Verificá antes de confirmar.
           </div>
         )}
 

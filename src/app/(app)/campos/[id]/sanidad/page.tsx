@@ -117,7 +117,7 @@ export default function SanidadPage() {
         </div>
         {!online && (
           <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
-            Sin conexión: el evento se guarda local y se sincroniza después (RNF-01).
+            Sin conexión: el evento se guarda local y se sincroniza después.
           </div>
         )}
 
@@ -165,7 +165,7 @@ export default function SanidadPage() {
             </select>
             {catalogos.length === 0 && (
               <div className="text-[11px] text-warning mt-1">
-                No hay eventos sanitarios en el catálogo. Cargalos en Catálogos (RN12).
+                No hay eventos sanitarios en el catálogo. Cargalos en Catálogos.
               </div>
             )}
           </div>
@@ -221,7 +221,7 @@ export default function SanidadPage() {
           >
             <AlertTriangle size={15} />
             {finCarencia
-              ? `Carencia de ${producto.diasCarencia} días → el animal no podrá ir a faena/movimiento hasta el ${finCarencia} (RF-13/RN03).`
+              ? `Carencia de ${producto.diasCarencia} días → el animal no podrá ir a faena/movimiento hasta el ${finCarencia}.`
               : "Producto sin período de carencia (0 días)."}
           </div>
         )}

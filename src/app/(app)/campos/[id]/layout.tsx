@@ -172,7 +172,7 @@ export default function CampoLayout({ children }: { children: React.ReactNode })
                 ? "text-success border-success/30 bg-success/10"
                 : "text-error border-error/30 bg-error/10"
             }`}
-            title={online ? "Con conexión" : "Sin conexión: capturás offline (RNF-01)"}
+            title={online ? "Con conexión" : "Sin conexión: capturás offline"}
           >
             {online ? <Wifi size={12} /> : <WifiOff size={12} />}
             {online ? "En línea" : "Offline"}
@@ -180,7 +180,7 @@ export default function CampoLayout({ children }: { children: React.ReactNode })
           {pendientes > 0 && (
             <span
               className="inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning"
-              title="Registros en cola de sincronización (RNF-08)"
+              title="Registros en cola de sincronización"
             >
               <RefreshCw size={12} /> {pendientes}
             </span>

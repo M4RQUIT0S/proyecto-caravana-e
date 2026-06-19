@@ -45,14 +45,14 @@ export default function ReportesPage() {
   if (!puede(rol, "reportes")) {
     return (
       <div className="card p-10 text-center text-ink-muted">
-        Los reportes de rentabilidad son exclusivos del Productor (RN21 / RU09).
+        Los reportes de rentabilidad son exclusivos del Productor.
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Filtros (CU-09) */}
+      {/* Filtros */}
       <div className="card p-4 flex flex-wrap items-end gap-3">
         <Filtro label="Lote">
           <select
@@ -113,7 +113,7 @@ export default function ReportesPage() {
         />
       </div>
       <p className="text-xs text-ink-dim">
-        Margen estimado con valor de referencia ${VALOR_KG_REFERENCIA}/kg (no es valuación contable, E-02).
+        Margen estimado con valor de referencia ${VALOR_KG_REFERENCIA}/kg (no es valuación contable).
       </p>
 
       {/* Cola de tropa */}

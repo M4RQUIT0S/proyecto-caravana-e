@@ -1,8 +1,8 @@
 "use client";
 
-// Registro de eventos de trazabilidad (CU-03 sanidad, CU-04 pesaje, CU-06 movimiento) y
-// consulta del historial individual (CU-05). Captura una sola vez en el origen (RU01):
-// cada registro puede nacer de una LecturaRFID y queda auditado (RN10) y en cola offline.
+// Registro de eventos de trazabilidad (sanidad, pesaje, movimiento) y
+// consulta del historial individual. Captura una sola vez en el origen:
+// cada registro puede nacer de una LecturaRFID y queda auditado y en cola offline.
 
 import { uid, update } from "./storage";
 import {
@@ -33,7 +33,7 @@ import type {
 
 export type Resultado = { ok: true; id: string } | { ok: false; error: string };
 
-// ----- Lectura RFID en el origen (CU-02 / RN22) -----
+// ----- Lectura RFID en el origen -----
 export function registrarLectura(
   campoId: string,
   caravana: string,
@@ -57,7 +57,7 @@ export function registrarLectura(
   return id;
 }
 
-// ----- CU-03: Evento sanitario -----
+// ----- Evento sanitario -----
 export interface InputSanitario {
   campoId: string;
   animalId: string;
@@ -82,18 +82,18 @@ export function registrarSanitario(
   const animal = animales.find((a) => a.id === input.animalId);
   if (!animal) return { ok: false, error: "Animal no encontrado." };
 
-  const estadoCheck = eventoPermitidoEnEstado(animal); // RN18
+  const estadoCheck = eventoPermitidoEnEstado(animal);
   if (!estadoCheck.ok) return { ok: false, error: estadoCheck.error! };
 
-  const fechaCheck = fechaNoFutura(input.fecha); // RN17
+  const fechaCheck = fechaNoFutura(input.fecha);
   if (!fechaCheck.ok) return { ok: false, error: fechaCheck.error! };
 
   const producto = productos.find((p) => p.id === input.productoId);
-  const dosisCheck = dosisEnRango(input.dosis, producto); // RN20
+  const dosisCheck = dosisEnRango(input.dosis, producto);
   if (!dosisCheck.ok) return { ok: false, error: dosisCheck.error! };
 
   const dias = producto?.diasCarencia ?? 0;
-  const fechaFinCarencia = calcularFinCarencia(input.fecha, dias); // RN03
+  const fechaFinCarencia = calcularFinCarencia(input.fecha, dias);
 
   const id = uid("ev_");
   update((db) => {
@@ -122,7 +122,7 @@ export function registrarSanitario(
     };
     db.eventos.push(ev);
     asociarLectura(db, input.lecturaId, id);
-    // Aplicar carencia al/los animales afectados (RN03 / RN14)
+    // Aplicar carencia al/los animales afectados
     const objetivo = input.animalesAfectados?.length
       ? input.animalesAfectados
       : [input.animalId];
@@ -146,7 +146,7 @@ export function registrarSanitario(
   return { ok: true, id };
 }
 
-// ----- CU-04: Pesaje -----
+// ----- Pesaje -----
 export interface InputPesaje {
   campoId: string;
   animalId: string;
@@ -177,7 +177,7 @@ export function registrarPesaje(
   if (!input.pesoKg || input.pesoKg <= 0)
     return { ok: false, error: "El peso debe ser mayor a 0." };
 
-  const fuera = pesoFueraDeRango(input.pesoKg, animal.categoria); // RN08
+  const fuera = pesoFueraDeRango(input.pesoKg, animal.categoria);
   if (fuera && !input.confirmarFueraDeRango)
     return {
       ok: false,
@@ -191,7 +191,7 @@ export function registrarPesaje(
   if (previo && previo.fecha) {
     pesoAnteriorKg = previo.pesoKg;
     dias = diasEntre(previo.fecha, input.fecha);
-    adpv = calcularADPV(input.pesoKg, previo.pesoKg, dias ?? 0); // RN13
+    adpv = calcularADPV(input.pesoKg, previo.pesoKg, dias ?? 0);
   }
 
   const id = uid("ev_");
@@ -227,7 +227,7 @@ export function registrarPesaje(
   return { ok: true, id };
 }
 
-// ----- CU-06: Movimiento -----
+// ----- Movimiento -----
 export interface InputMovimiento {
   campoId: string;
   usuarioId: string;
@@ -253,7 +253,7 @@ export function registrarMovimiento(
   const fechaCheck = fechaNoFutura(input.fecha);
   if (!fechaCheck.ok) return { ok: false, error: fechaCheck.error! };
 
-  // Validar cada animal (RN09 / RN03 / RN18)
+  // Validar cada animal
   for (const aid of input.animalIds) {
     const a = animales.find((x) => x.id === aid);
     if (!a) return { ok: false, error: "Algún animal no existe." };
@@ -323,7 +323,7 @@ export interface ItemHistorial {
   estadoSincronizacion?: string;
 }
 
-// CU-05: historial individual completo y cronológico.
+// historial individual completo y cronológico.
 export function historialDeAnimal(animalId: string, db: DBShape): ItemHistorial[] {
   const animal = db.animales.find((a) => a.id === animalId);
   const items: ItemHistorial[] = [];
@@ -393,7 +393,7 @@ export function historialDeAnimal(animalId: string, db: DBShape): ItemHistorial[
   return items.sort((a, b) => b.fechaHora - a.fechaHora);
 }
 
-// Semáforo de aptitud (RN03 / RN14): apto para moverse/faena.
+// Semáforo de aptitud: apto para moverse/faena.
 export function aptitud(animal: Animal): {
   color: "verde" | "amber" | "rojo";
   texto: string;
@@ -410,7 +410,7 @@ export function aptitud(animal: Animal): {
     : { color: "amber", texto: apto.error ?? "Revisar" };
 }
 
-// Validación de alta para CU-01 (coherencia categoría/sexo, RN19), usada por el modal.
+// Validación de alta (coherencia categoría/sexo), usada por el modal.
 export function validarAltaCoherencia(categoria?: string, sexo?: "M" | "H"): string | null {
   const v = coherenciaCategoriaSexo(categoria, sexo);
   return v.ok ? null : v.error ?? null;
