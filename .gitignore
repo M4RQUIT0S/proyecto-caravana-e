@@ -22,3 +22,5 @@ notas.md
 .dbtmp/
 .t*/
 .verify*/
+
+.vercel

@@ -1,4 +1,4 @@
-// Reglas de negocio del SRS (RN01..RN23). Funciones puras, sin React ni storage,
+// Reglas de negocio del SRS. Funciones puras, sin React ni storage,
 // para poder reutilizarlas desde formularios y tests. Cada función documenta la regla
 // que materializa y su acción ante violación (bloqueo / alerta / cómputo / derivación).
 
@@ -19,7 +19,7 @@ export interface Validacion {
 const OK: Validacion = { ok: true };
 const fail = (error: string): Validacion => ({ ok: false, error });
 
-// ---------- RN01: Formato y validación del CII ----------
+// ---------- Formato y validación del CII ----------
 // Secuencia numérica de exactamente 10 dígitos, sin letras, espacios ni símbolos.
 // Acción: bloqueo duro.
 export function validarFormatoCII(cii: string): Validacion {
@@ -34,7 +34,7 @@ export function ciiValido(cii: string): boolean {
   return validarFormatoCII(cii).ok;
 }
 
-// ---------- RN02: No-duplicidad de caravana activa ----------
+// ---------- No-duplicidad de caravana activa ----------
 // Un mismo CII no puede estar asociado a dos animales activos a la vez. Bloqueo duro.
 export function caravanaUnicaActiva(
   cii: string,
@@ -53,7 +53,7 @@ export function caravanaUnicaActiva(
   return OK;
 }
 
-// ---------- RN03: Período de carencia ----------
+// ---------- Período de carencia ----------
 // Cómputo: fechaFinCarencia = fecha del evento + díasCarencia del producto.
 export function calcularFinCarencia(
   fechaEventoISO: string,
@@ -82,13 +82,13 @@ export function diasRestantesCarencia(animal: Animal, hoy = new Date()): number 
   return Math.max(0, Math.ceil(ms / 86400000));
 }
 
-// ---------- RN04: Color oficial de caravana según estatus de la zona ----------
+// ---------- Color oficial de caravana según estatus de la zona ----------
 // Derivación: zona con vacunación antiaftosa → blanco; sin vacunación → verde.
 export function colorCaravana(campo: Pick<Campo, "zonaVacunacionAftosa">): string {
   return campo.zonaVacunacionAftosa ? "blanco" : "verde";
 }
 
-// ---------- RN05: Identificación obligatoria temprana ----------
+// ---------- Identificación obligatoria temprana ----------
 // La fecha de colocación/alta no puede ser anterior al nacimiento. Validación.
 export function identificacionTemprana(
   fechaNacimientoISO?: string,
@@ -102,7 +102,7 @@ export function identificacionTemprana(
   return OK;
 }
 
-// ---------- RN06: Documentación obligatoria para movimiento externo ----------
+// ---------- Documentación obligatoria para movimiento externo ----------
 // Todo movimiento externo exige datos obligatorios del DT-e. Bloqueo duro.
 export function datosDTeObligatorios(datos: {
   origen?: string;
@@ -116,12 +116,12 @@ export function datosDTeObligatorios(datos: {
   return OK;
 }
 
-// ---------- RN07: Baja lógica, no física ----------
+// ---------- Baja lógica, no física ----------
 export function esActivo(e: { activo?: boolean }): boolean {
   return e.activo !== false;
 }
 
-// ---------- RN08: Rango válido de peso por categoría ----------
+// ---------- Rango válido de peso por categoría ----------
 // Validación con alerta+confirmación (no bloqueo). Rangos orientativos por categoría.
 const RANGOS_PESO: Record<string, [number, number]> = {
   ternero: [25, 250],
@@ -153,7 +153,7 @@ export function pesoFueraDeRango(pesoKg: number, categoria?: string): boolean {
   return pesoKg < rango[0] || pesoKg > rango[1];
 }
 
-// ---------- RN09 + RN03: Restricción para mover ----------
+// ---------- Restricción para mover ----------
 // Un animal en carencia o restringido no puede moverse sin autorización del Productor.
 export function puedeMoverse(
   animal: Animal,
@@ -161,7 +161,7 @@ export function puedeMoverse(
   hoy = new Date()
 ): Validacion {
   if (estado(animal) === "muerto" || estado(animal) === "egresado")
-    return fail("El animal ya egresó o está muerto: no admite movimientos (RN18).");
+    return fail("El animal ya egresó o está muerto: no admite movimientos.");
   if (estaEnCarencia(animal, hoy) && !esProductor)
     return fail(
       `Animal en carencia hasta ${animal.fechaCarenciaHasta}. Requiere autorización del Productor.`
@@ -171,7 +171,7 @@ export function puedeMoverse(
   return OK;
 }
 
-// Apto para faena/movimiento externo: bloqueo duro si está en carencia (RN03 / RF-13).
+// Apto para faena/movimiento externo: bloqueo duro si está en carencia.
 export function aptoParaFaena(animal: Animal, hoy = new Date()): Validacion {
   if (estaEnCarencia(animal, hoy))
     return fail(`En carencia hasta ${animal.fechaCarenciaHasta}`);
@@ -180,7 +180,7 @@ export function aptoParaFaena(animal: Animal, hoy = new Date()): Validacion {
   return OK;
 }
 
-// ---------- RN13: Cálculo de ADPV entre pesajes consecutivos ----------
+// ---------- Cálculo de ADPV entre pesajes consecutivos ----------
 export function calcularADPV(
   pesoActual: number,
   pesoAnterior: number,
@@ -200,7 +200,7 @@ export function diasEntre(fechaAnteriorISO: string, fechaActualISO: string): num
   );
 }
 
-// ---------- RN14: Estados del animal y transiciones ----------
+// ---------- Estados del animal y transiciones ----------
 export function estado(animal: Animal): EstadoAnimal {
   return animal.estado ?? "activo";
 }
@@ -221,7 +221,7 @@ export function transicionEstadoValida(
   return TRANSICIONES[desde]?.includes(hacia) ?? false;
 }
 
-// ---------- RN15: Sincronización requiere credencial válida ----------
+// ---------- Sincronización requiere credencial válida ----------
 export function tokenValido(token?: string): Validacion {
   if (!token?.trim())
     return fail("Falta el token SENASA. Cargalo en los datos del establecimiento.");
@@ -229,7 +229,7 @@ export function tokenValido(token?: string): Validacion {
   return OK;
 }
 
-// ---------- RN16: Unicidad de RENSPA ----------
+// ---------- Unicidad de RENSPA ----------
 export function renspaUnico(
   renspa: string,
   campos: Campo[],
@@ -242,7 +242,7 @@ export function renspaUnico(
   return OK;
 }
 
-// ---------- RN17: Fechas no futuras y coherencia temporal ----------
+// ---------- Fechas no futuras y coherencia temporal ----------
 export function fechaNoFutura(fechaISO?: string, hoy = new Date()): Validacion {
   if (!fechaISO) return OK;
   const f = parseISO(fechaISO);
@@ -251,15 +251,15 @@ export function fechaNoFutura(fechaISO?: string, hoy = new Date()): Validacion {
   return OK;
 }
 
-// ---------- RN18: Un animal egresado o muerto no admite eventos posteriores ----------
+// ---------- Un animal egresado o muerto no admite eventos posteriores ----------
 export function eventoPermitidoEnEstado(animal: Animal): Validacion {
   const e = estado(animal);
   if (e === "muerto" || e === "egresado")
-    return fail(`El animal está ${e}: no admite nuevos eventos (RN18).`);
+    return fail(`El animal está ${e}: no admite nuevos eventos.`);
   return OK;
 }
 
-// ---------- RN19: Coherencia categoría / sexo / edad ----------
+// ---------- Coherencia categoría / sexo / edad ----------
 export function coherenciaCategoriaSexo(
   categoria?: string,
   sexo?: "M" | "H"
@@ -275,7 +275,7 @@ export function coherenciaCategoriaSexo(
   return OK;
 }
 
-// ---------- RN20: Dosis dentro del rango del producto ----------
+// ---------- Dosis dentro del rango del producto ----------
 export function dosisEnRango(
   dosis: number | undefined,
   producto?: Pick<ProductoSanitario, "dosisMin" | "dosisMax">
@@ -288,14 +288,14 @@ export function dosisEnRango(
   return OK;
 }
 
-// ---------- RN22: La lectura RFID debe asociarse a un contexto ----------
+// ---------- La lectura RFID debe asociarse a un contexto ----------
 export function lecturaConContexto(contextoEventoId?: string): Validacion {
   if (!contextoEventoId)
     return fail("La lectura RFID debe asociarse a un alta, evento, pesaje o movimiento.");
   return OK;
 }
 
-// ---------- RN23: Integridad de la sincronización offline ----------
+// ---------- Integridad de la sincronización offline ----------
 // Un registro local/pendiente nunca se descarta: sólo cambia de estado al sincronizar.
 export function esPendienteSync(e: { estadoSincronizacion: EstadoSincronizacion }): boolean {
   return e.estadoSincronizacion === "local" || e.estadoSincronizacion === "pendiente";

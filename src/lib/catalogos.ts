@@ -1,7 +1,7 @@
 "use client";
 
-// CU-10: administración de datos maestros (catálogos de eventos, productos sanitarios,
-// proveedores y datos del establecimiento). Baja lógica (RN07), unicidad de RENSPA (RN16).
+// administración de datos maestros (catálogos de eventos, productos sanitarios,
+// proveedores y datos del establecimiento). Baja lógica, unicidad de RENSPA.
 
 import { uid, update } from "./storage";
 import { colorCaravana, renspaUnico } from "./reglas";
@@ -56,7 +56,7 @@ export function colorOficial(zonaVacunacionAftosa?: boolean): string {
   return colorCaravana({ zonaVacunacionAftosa });
 }
 
-// ----- Catálogo de eventos (RN12) -----
+// ----- Catálogo de eventos -----
 export function crearCatalogo(
   campoId: string,
   datos: { tipoEvento: TipoEvento; codigo: string; descripcion: string; requiereProducto?: boolean }
@@ -102,7 +102,7 @@ export function catalogosDe(
   );
 }
 
-// ----- Productos sanitarios (RN03 / RN20) -----
+// ----- Productos sanitarios -----
 export function crearProducto(
   campoId: string,
   datos: Omit<ProductoSanitario, "id" | "campoId" | "createdAt" | "activo">
@@ -140,7 +140,7 @@ export function productosDe(
   return productos.filter((p) => p.campoId === campoId && p.activo !== false);
 }
 
-// ----- Proveedores (RU07) -----
+// ----- Proveedores -----
 export function crearProveedor(
   campoId: string,
   datos: Omit<Proveedor, "id" | "campoId" | "createdAt" | "activo">

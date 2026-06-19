@@ -74,7 +74,7 @@ export default function AnimalesPage() {
   }, [db.animales, id, loteSel, filtro]);
 
   function eliminar(animalId: string) {
-    if (!confirm("¿Dar de baja este animal? Queda inactivo pero conserva su historial (RN07).")) return;
+    if (!confirm("¿Dar de baja este animal? Queda inactivo pero conserva su historial.")) return;
     update((db) => {
       const a = db.animales.find((x) => x.id === animalId);
       if (a) {
@@ -403,10 +403,10 @@ function AnimalFormModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, animal?.id]);
 
-  // Validaciones en vivo para el alta (RNF-03: bloqueo, no advertencia).
+  // Validaciones en vivo para el alta (bloqueo, no advertencia).
   const ciiTrim = form.caravana.trim();
-  const formatoCII = validarFormatoCII(ciiTrim); // RN01
-  const ciiLibre = caravanaUnicaActiva(ciiTrim, campoId, db.animales, animal?.id); // RN02
+  const formatoCII = validarFormatoCII(ciiTrim);
+  const ciiLibre = caravanaUnicaActiva(ciiTrim, campoId, db.animales, animal?.id);
   const altaBloqueada = !editMode && (!formatoCII.ok || !ciiLibre.ok);
 
   function submit(e: React.FormEvent) {
@@ -428,12 +428,12 @@ function AnimalFormModal({
     }
     const sexoVal =
       form.sexo === "M" || form.sexo === "H" ? (form.sexo as "M" | "H") : undefined;
-    const coherencia = validarAltaCoherencia(form.categoria.trim() || undefined, sexoVal); // RN19
+    const coherencia = validarAltaCoherencia(form.categoria.trim() || undefined, sexoVal);
     if (coherencia) {
       setErr(coherencia);
       return;
     }
-    const tempr = identificacionTemprana(form.fechaNacimiento || undefined); // RN05
+    const tempr = identificacionTemprana(form.fechaNacimiento || undefined);
     if (!tempr.ok) {
       setErr(tempr.error!);
       return;
@@ -462,11 +462,11 @@ function AnimalFormModal({
           id: uid("a_"),
           campoId,
           ...datos,
-          estado: "activo", // RN14
-          activo: true, // RN07 (baja lógica)
+          estado: "activo",
+          activo: true, // baja lógica
           colorCaravana: colorCaravana({
             zonaVacunacionAftosa: campo?.zonaVacunacionAftosa,
-          }), // RN04
+          }),
           alertas: [],
           createdAt: Date.now(),
           updatedAt: Date.now(),
@@ -504,11 +504,11 @@ function AnimalFormModal({
               ciiTrim.length > 0 && (
                 <div className="text-[11px] mt-1 space-y-0.5">
                   <div className={formatoCII.ok ? "text-success" : "text-error"}>
-                    {formatoCII.ok ? "✓ formato OK (10 dígitos, RN01)" : `✗ ${formatoCII.error}`}
+                    {formatoCII.ok ? "✓ formato OK (10 dígitos)" : `✗ ${formatoCII.error}`}
                   </div>
                   {formatoCII.ok && (
                     <div className={ciiLibre.ok ? "text-success" : "text-error"}>
-                      {ciiLibre.ok ? "✓ CII libre (no duplicado, RN02)" : `✗ ${ciiLibre.error}`}
+                      {ciiLibre.ok ? "✓ CII libre (no duplicado)" : `✗ ${ciiLibre.error}`}
                     </div>
                   )}
                 </div>
@@ -615,7 +615,7 @@ function AnimalFormModal({
           <button
             className="btn-primary text-sm disabled:opacity-40 disabled:cursor-not-allowed"
             disabled={altaBloqueada}
-            title={altaBloqueada ? "Corregí el CII para habilitar el alta (RNF-03)." : undefined}
+            title={altaBloqueada ? "Corregí el CII para habilitar el alta." : undefined}
           >
             {editMode ? "Guardar cambios" : "Guardar animal"}
           </button>

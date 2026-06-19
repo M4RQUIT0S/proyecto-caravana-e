@@ -1,7 +1,7 @@
 "use client";
 
-// Imputación de costos por animal o lote (insumo de los reportes de rentabilidad, RU07).
-// El sistema produce información de costos productivos, no contabilidad general (exclusión E-02).
+// Imputación de costos por animal o lote (insumo de los reportes de rentabilidad).
+// El sistema produce información de costos productivos, no contabilidad general (exclusión).
 
 import { uid, update } from "./storage";
 import type { CostoAnimal, TipoCosto } from "./types";

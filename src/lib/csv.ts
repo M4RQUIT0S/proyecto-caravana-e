@@ -427,7 +427,7 @@ export function importarAnimales(
           loteId: opts.loteId,
           caravana,
           ...datos,
-          // estado/activo iniciales para trazabilidad (RN14/RN07)
+          // estado/activo iniciales para trazabilidad
           estado: "activo",
           activo: true,
           alertas: [],

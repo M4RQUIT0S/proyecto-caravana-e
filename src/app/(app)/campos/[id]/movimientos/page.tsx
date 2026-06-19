@@ -104,7 +104,7 @@ export default function MovimientosPage() {
     setMsg({
       ok: true,
       text: externo
-        ? `Movimiento externo registrado para ${ids.length} animal(es). Prepará el DT-e en SENASA (RN06).`
+        ? `Movimiento externo registrado para ${ids.length} animal(es). Prepará el DT-e en SENASA.`
         : `Movimiento registrado para ${ids.length} animal(es).`,
     });
     setSeleccion(new Set());
@@ -224,8 +224,8 @@ export default function MovimientosPage() {
           </div>
           {subtipo === "externo" && (
             <p className="text-[11px] text-ink-dim mt-1">
-              Los animales en carencia se bloquean para movimiento externo/faena (RF-13/RN03), salvo
-              autorización del Productor para movimientos no-faena (RN09).
+              Los animales en carencia se bloquean para movimiento externo/faena, salvo
+              autorización del Productor para movimientos no-faena.
             </p>
           )}
         </div>

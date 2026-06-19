@@ -39,7 +39,7 @@ export default function SenasaPage() {
   if (!puede(rol, "senasa")) {
     return (
       <div className="card p-10 text-center text-ink-muted">
-        Sólo el Productor gestiona la documentación y la sincronización con SENASA (RN21).
+        Sólo el Productor gestiona la documentación y la sincronización con SENASA.
       </div>
     );
   }
@@ -50,7 +50,7 @@ export default function SenasaPage() {
         <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning flex items-center gap-2">
           <AlertTriangle size={16} />
           Cargá el RENSPA y el token del establecimiento en Catálogos: sin eso, SENASA rechaza los
-          registros (RN15 / RN16).
+          registros.
         </div>
       )}
       <PrepararDTe campoId={id} onChange={refresh} />
@@ -100,7 +100,7 @@ function PrepararDTe({ campoId, onChange }: { campoId: string; onChange: () => v
     setBloqueados([]);
     setSeleccion(new Set());
     setNumero("");
-    setMsg({ ok: true, text: "DT-e preparado y agregado a la cola de sincronización (RU10)." });
+    setMsg({ ok: true, text: "DT-e preparado y agregado a la cola de sincronización." });
     onChange();
   }
 
@@ -111,7 +111,7 @@ function PrepararDTe({ campoId, onChange }: { campoId: string; onChange: () => v
         <h3 className="font-display text-xl text-ink">Preparar DT-e (movimiento externo)</h3>
       </div>
       <p className="text-sm text-ink-muted">
-        Se arma con datos ya cargados (RU10). Los animales en carencia se bloquean (RF-13 / RN03).
+        Se arma con datos ya cargados. Los animales en carencia se bloquean.
       </p>
 
       <form onSubmit={preparar} className="space-y-4">
@@ -173,7 +173,7 @@ function PrepararDTe({ campoId, onChange }: { campoId: string; onChange: () => v
         {bloqueados.length > 0 && (
           <div className="rounded-xl border border-error/30 bg-error/5 p-3 text-sm">
             <div className="text-error font-medium mb-1 flex items-center gap-1.5">
-              <XCircle size={15} /> Bloqueados por carencia/estado (RF-13)
+              <XCircle size={15} /> Bloqueados por carencia/estado
             </div>
             <ul className="text-error/80 text-xs space-y-0.5">
               {bloqueados.map((b) => (
@@ -256,7 +256,7 @@ function Sincronizacion({
 
       {!online && (
         <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
-          Sin conexión: la sincronización requiere señal. La cola se conserva intacta (RNF-08).
+          Sin conexión: la sincronización requiere señal. La cola se conserva intacta.
         </div>
       )}
 
@@ -299,7 +299,7 @@ function Sincronizacion({
                 ))}
               </ul>
               <div className="text-xs text-ink-muted mt-1">
-                Corregí el dato y reintentá: los rechazados siguen en cola (RNF-08).
+                Corregí el dato y reintentá: los rechazados siguen en cola.
               </div>
             </div>
           )}
@@ -309,7 +309,7 @@ function Sincronizacion({
 
       {logs.length > 0 && (
         <div>
-          <div className="label mb-2">Log de sincronización (auditoría, RN10)</div>
+          <div className="label mb-2">Log de sincronización (auditoría)</div>
           <ul className="text-xs space-y-1 max-h-40 overflow-auto">
             {logs.map((l) => (
               <li key={l.id} className="flex items-center justify-between text-ink-dim">
