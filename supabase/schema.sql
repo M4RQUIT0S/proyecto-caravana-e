@@ -390,3 +390,66 @@ drop trigger if exists campos_guard_membership on public.campos;
 create trigger campos_guard_membership
   before update on public.campos for each row
   execute function private.guard_campos_membership();
+
+-- ============================================================================
+-- Validación de integridad del `data` jsonb (defensa en profundidad)
+-- ============================================================================
+-- La RLS controla QUIÉN escribe y EN QUÉ campo, pero no la FORMA del `data`. Un miembro
+-- con permiso de escritura podría, vía PostgREST directo, saltearse las validaciones del
+-- cliente (reglas.ts) e inyectar datos malformados. Este trigger espeja SÓLO las reglas
+-- DURAS y estructurales (las que nunca varían legítimamente), para no crear una segunda
+-- fuente de verdad frágil: el resto de la validación de negocio sigue en el cliente.
+-- Corre BEFORE INSERT OR UPDATE, así sólo afecta escrituras nuevas (no rechaza filas
+-- viejas retroactivamente).
+create or replace function private.validar_data_row()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  -- `data` debe ser un objeto JSON (no array, escalar ni null).
+  if jsonb_typeof(new.data) is distinct from 'object' then
+    raise exception 'data debe ser un objeto JSON';
+  end if;
+
+  -- Consistencia de identidad: el objeto no puede declarar un id/campo distinto al de la
+  -- fila (cierra que un miembro escriba `data` apuntando a un campo ajeno o con id falseado).
+  if (new.data ? 'id') and (new.data ->> 'id') is distinct from new.id then
+    raise exception 'data.id (%) no coincide con la fila (%)', new.data ->> 'id', new.id;
+  end if;
+  if (new.data ? 'campoId') and (new.data ->> 'campoId') is distinct from new.campo_id then
+    raise exception 'data.campoId (%) no coincide con la fila (%)', new.data ->> 'campoId', new.campo_id;
+  end if;
+
+  -- Reglas duras por tabla (espejo de reglas.ts).
+  if tg_table_name = 'animales' then
+    -- RN01: CII = exactamente 10 dígitos numéricos (bloqueo duro).
+    if (new.data ? 'caravana') and not ((new.data ->> 'caravana') ~ '^\d{10}$') then
+      raise exception 'CII inválido: debe ser 10 dígitos numéricos (RN01)';
+    end if;
+  elsif tg_table_name = 'eventos' then
+    -- Discriminador de subtipo conocido (lo usan la RLS y el dominio).
+    if coalesce(new.data ->> 'tipo', '') not in ('sanitario', 'pesaje', 'movimiento') then
+      raise exception 'Tipo de evento inválido: %', new.data ->> 'tipo';
+    end if;
+    -- Peso físicamente posible (espejo de pesoFueraDeRango: 0 < peso <= 1500).
+    if (new.data ->> 'tipo') = 'pesaje' and jsonb_typeof(new.data -> 'pesoKg') = 'number' then
+      if (new.data ->> 'pesoKg')::numeric <= 0 or (new.data ->> 'pesoKg')::numeric > 1500 then
+        raise exception 'Peso fuera del rango físico (0–1500 kg)';
+      end if;
+    end if;
+  end if;
+
+  return new;
+end; $$;
+
+-- Se aplica a las tablas de datos de dominio (no a campos/profiles/invitaciones, que ya
+-- tienen sus propias guardias o esquema fijo).
+do $$ declare t text; begin
+  foreach t in array array[
+    'lotes','animales','catalogos','productos','proveedores',
+    'lecturas','eventos','documentos','sincronizaciones','costos'
+  ] loop
+    execute format('drop trigger if exists %I on public.%I;', t || '_validar', t);
+    execute format(
+      'create trigger %I before insert or update on public.%I for each row execute function private.validar_data_row();',
+      t || '_validar', t);
+  end loop;
+end $$;
