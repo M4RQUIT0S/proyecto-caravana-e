@@ -256,6 +256,12 @@ grant execute on function public.username_disponible(text) to anon, authenticate
 grant execute on function public.unirme_con_codigo(text) to authenticated;
 grant execute on function public.aceptar_invitacion(text) to authenticated;
 
+-- Limpieza: `public.rls_auto_enable()` es una función huérfana (no la define este
+-- esquema ni la usa la app) que quedó en la base como SECURITY DEFINER ejecutable por
+-- anon/authenticated → la marcaban los lints 0028/0029. Se elimina; el `if exists`
+-- hace el statement idempotente para bases donde nunca existió.
+drop function if exists public.rls_auto_enable();
+
 -- ============================================================================
 -- Endurecimiento RLS por rol (permisos granulares del Operador delegado)
 -- ============================================================================
