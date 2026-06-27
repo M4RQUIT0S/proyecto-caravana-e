@@ -14,6 +14,30 @@ const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || "https://proyecto-caravana-e
   .map((o) => o.trim())
   .filter(Boolean);
 
+// Tope de payload: una declaración no debería traer más animales que una tropa grande.
+// Acota el costo del login Playwright→AFIP y evita payloads abusivos (DoS).
+const MAX_ANIMALES = 5000;
+
+// Rate-limit best-effort en memoria, por usuario. En serverless cada instancia tiene su
+// propio Map, así que NO es un límite global duro; alcanza para frenar el abuso desde una
+// sola sesión sin sumar infra. Para un límite estricto haría falta un store compartido
+// (Upstash/Supabase). El bot es pesado y poco frecuente, así que 5/min es holgado.
+const RATE_MAX = 5;
+const RATE_WINDOW_MS = 60_000;
+const hits = new Map<string, number[]>();
+
+function rateLimited(userId: string): boolean {
+  const now = Date.now();
+  const recientes = (hits.get(userId) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+  if (recientes.length >= RATE_MAX) {
+    hits.set(userId, recientes);
+    return true;
+  }
+  recientes.push(now);
+  hits.set(userId, recientes);
+  return false;
+}
+
 function corsHeaders(origin: string | null): Record<string, string> {
   const allowAny = ALLOWED_ORIGINS.includes("*");
   const allow = allowAny ? "*" : origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
@@ -30,21 +54,23 @@ function json(body: unknown, status: number, origin: string | null) {
   return NextResponse.json(body, { status, headers: corsHeaders(origin) });
 }
 
-// Valida el JWT de Supabase del header Authorization: Bearer <token>.
-// Sin un usuario autenticado, el endpoint no procesa nada (cierra el proxy abierto a AFIP).
-async function requireAuth(req: Request): Promise<boolean> {
+// Valida el JWT de Supabase del header Authorization: Bearer <token> y devuelve el id del
+// usuario (o null). Sin un usuario autenticado, el endpoint no procesa nada (cierra el
+// proxy abierto a AFIP). El id se usa además como clave del rate-limit.
+async function authUser(req: Request): Promise<{ id: string } | null> {
   const auth = req.headers.get("authorization") || "";
   const token = auth.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : "";
-  if (!token) return false;
+  if (!token) return null;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return false; // sin config no se puede validar → se deniega
+  if (!url || !key) return null; // sin config no se puede validar → se deniega
   try {
     const sb = createClient(url, key, { auth: { persistSession: false } });
     const { data, error } = await sb.auth.getUser(token);
-    return !error && !!data.user;
+    if (error || !data.user) return null;
+    return { id: data.user.id };
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -71,8 +97,16 @@ export async function POST(req: Request) {
 
   // Autenticación obligatoria: sólo usuarios con sesión Supabase válida pueden usar el bot
   // (la Clave Fiscal de AFIP transita acá; sin esto sería un proxy abierto a AFIP).
-  if (!(await requireAuth(req))) {
+  const user = await authUser(req);
+  if (!user) {
     return json({ ok: false, mensaje: "No autorizado: iniciá sesión." }, 401, origin);
+  }
+  if (rateLimited(user.id)) {
+    return json(
+      { ok: false, mensaje: "Demasiadas solicitudes. Esperá un minuto e intentá de nuevo." },
+      429,
+      origin
+    );
   }
 
   let body: ReqBody;
@@ -99,6 +133,13 @@ export async function POST(req: Request) {
   }
   if (animales.length === 0) {
     return json({ ok: false, mensaje: "No hay caravanas para declarar." }, 400, origin);
+  }
+  if (animales.length > MAX_ANIMALES) {
+    return json(
+      { ok: false, mensaje: `Demasiados animales en una sola declaración (máx ${MAX_ANIMALES}).` },
+      413,
+      origin
+    );
   }
 
   const resultado = await sincronizarSIGSA({ cuit, clave, acta, loteNombre, animales });

@@ -14,10 +14,15 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // Fuerza HTTPS por 2 años en el dominio y subdominios. Vercel ya lo agrega en
+  // *.vercel.app; lo fijamos explícito para que valga también en dominio propio.
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
 ];
 
 const nextConfig = {
   reactStrictMode: true,
+  // No revelar la tecnología del servidor (quita el header `X-Powered-By: Next.js`).
+  poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
