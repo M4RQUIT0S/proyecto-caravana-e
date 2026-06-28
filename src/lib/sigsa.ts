@@ -2,6 +2,7 @@
 
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import { sanitizarFilas } from "./csv-safe";
 import type { Animal, AfipCredenciales, Lote } from "./types";
 import { update } from "./storage";
 
@@ -88,7 +89,7 @@ export function exportarPendientesCSV(
   loteNombre: string,
   acta: string
 ) {
-  const rows = animalesARowsSigsa(animales, acta);
+  const rows = sanitizarFilas(animalesARowsSigsa(animales, acta));
   const csv = Papa.unparse(rows);
   const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8;" });
   descargarBlob(blob, nombreArchivoSigsa(loteNombre, "csv"));
@@ -99,7 +100,7 @@ export function exportarPendientesXLSX(
   loteNombre: string,
   acta: string
 ) {
-  const rows = animalesARowsSigsa(animales, acta);
+  const rows = sanitizarFilas(animalesARowsSigsa(animales, acta));
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "SIGSA");

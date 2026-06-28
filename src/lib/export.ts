@@ -2,6 +2,7 @@
 
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import { sanitizarFilas } from "./csv-safe";
 import type { Animal, Lote } from "./types";
 
 export interface ExportRow {
@@ -57,7 +58,7 @@ export function exportarAnimalesCSV(
   lotes: Lote[],
   base = "animales"
 ) {
-  const rows = animalesARows(animales, lotes);
+  const rows = sanitizarFilas(animalesARows(animales, lotes));
   const csv = Papa.unparse(rows);
   const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8;" });
   descargarBlob(blob, nombreArchivo(base, "csv"));
@@ -68,7 +69,7 @@ export function exportarAnimalesXLSX(
   lotes: Lote[],
   base = "animales"
 ) {
-  const rows = animalesARows(animales, lotes);
+  const rows = sanitizarFilas(animalesARows(animales, lotes));
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Animales");
