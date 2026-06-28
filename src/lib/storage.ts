@@ -71,16 +71,20 @@ export function uid(prefix = ""): string {
 }
 
 export function codigoCampo(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 32 símbolos sin ambiguos (0/O, 1/I)
   // Código de acceso a un campo → se genera con CSPRNG (no Math.random, predecible).
+  // 8 caracteres = 32^8 ≈ 40 bits: encarece la enumeración de códigos (unirse da sólo
+  // rol "vista", pero igual subimos la barrera). Los códigos viejos de 6 chars siguen
+  // siendo válidos; esto sólo afecta a los campos nuevos.
+  const LARGO = 8;
   const cryptoObj = typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
   let s = "";
   if (cryptoObj?.getRandomValues) {
-    const buf = new Uint32Array(6);
+    const buf = new Uint32Array(LARGO);
     cryptoObj.getRandomValues(buf);
-    for (let i = 0; i < 6; i++) s += chars[buf[i] % chars.length];
+    for (let i = 0; i < LARGO; i++) s += chars[buf[i] % chars.length];
   } else {
-    for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    for (let i = 0; i < LARGO; i++) s += chars[Math.floor(Math.random() * chars.length)];
   }
   return s;
 }

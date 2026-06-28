@@ -3,6 +3,7 @@
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { sanitizarFilas } from "./csv-safe";
+import { cifrarSecreto } from "./secure-store";
 import type { Animal, AfipCredenciales, Lote } from "./types";
 import { update } from "./storage";
 
@@ -141,16 +142,18 @@ export function marcarComoDeclarados(
   return { marcados, yaDeclarados };
 }
 
-export function guardarCredencialesAfip(
+export async function guardarCredencialesAfip(
   campoId: string,
   cuit: string,
   clave: string
 ) {
   const limpio = cuit.replace(/\D/g, "");
+  // La Clave Fiscal se cifra en reposo (AES-GCM, clave de dispositivo en IndexedDB).
+  const claveCifrada = await cifrarSecreto(clave);
   update((db) => {
     const c = db.campos.find((x) => x.id === campoId);
     if (!c) return;
-    c.afip = { cuit: limpio, clave, guardadoAt: Date.now() };
+    c.afip = { cuit: limpio, clave: claveCifrada, guardadoAt: Date.now() };
   });
 }
 
