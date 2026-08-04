@@ -36,6 +36,7 @@ import {
 } from "@/lib/reglas";
 import { validarAltaCoherencia, historialDeAnimal, aptitud } from "@/lib/eventos";
 import { estado as estadoAnimal } from "@/lib/reglas";
+import { puede, permisosDe } from "@/lib/permisos";
 import { RAZAS, CATEGORIAS } from "@/lib/clasificacion";
 import type { Animal, Alerta } from "@/lib/types";
 
@@ -44,7 +45,11 @@ export default function AnimalesPage() {
   const sp = useSearchParams();
   const { db, user, refresh } = useApp();
   const rol = rolEnCampo(user!.id, id);
-  const puedeCrear = rol === "admin" || rol === "usuario";
+  // Espejo de permisos.ts (y de member_permite en la RLS): el alta la habilita `puede()`,
+  // no una lista de roles a mano — así el Operador delegado con captura habilitada puede
+  // dar de alta, igual que se lo permite Postgres.
+  const miembro = db.campos.find((c) => c.id === id)?.miembros.find((m) => m.userId === user!.id);
+  const puedeCrear = puede(rol, "alta", permisosDe(miembro));
   const esAdmin = rol === "admin";
 
   const [filtro, setFiltro] = useState("");

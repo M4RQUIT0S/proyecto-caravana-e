@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useApp } from "@/lib/context";
 import { rolEnCampo } from "@/lib/auth";
+import { puede } from "@/lib/permisos";
 import { supabase, supabaseConfigurado } from "@/lib/supabase/client";
 import { descifrarSecreto } from "@/lib/secure-store";
 import { Modal } from "@/components/Modal";
@@ -48,7 +49,9 @@ export default function SigsaBotPage() {
   const { id } = useParams<{ id: string }>();
   const { db, user, refresh } = useApp();
   const rol = rolEnCampo(user!.id, id);
-  const puedeDeclarar = rol === "admin" || rol === "usuario";
+  // Declarar a SIGSA es trámite regulatorio: mismo permiso que SENASA (el Operador
+  // delegado lo tiene denegado, igual que en la RLS).
+  const puedeDeclarar = puede(rol, "senasa");
   const campo = db.campos.find((c) => c.id === id);
   const afip = campo?.afip;
 

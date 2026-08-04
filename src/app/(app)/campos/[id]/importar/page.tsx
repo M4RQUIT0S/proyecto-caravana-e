@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useApp } from "@/lib/context";
 import { rolEnCampo } from "@/lib/auth";
+import { puede, permisosDe } from "@/lib/permisos";
 import {
   importarAnimales,
   parseCSV,
@@ -43,9 +44,11 @@ interface PreviewState {
 
 export default function ImportarPage() {
   const { id } = useParams<{ id: string }>();
-  const { user, refresh } = useApp();
+  const { db, user, refresh } = useApp();
   const rol = rolEnCampo(user!.id, id);
-  const puedeEditar = rol === "admin" || rol === "usuario";
+  // Importar es un alta masiva: mismo permiso que el alta individual (espeja la RLS).
+  const miembro = db.campos.find((c) => c.id === id)?.miembros.find((m) => m.userId === user!.id);
+  const puedeEditar = puede(rol, "alta", permisosDe(miembro));
   const [tab, setTab] = useState<Tab>("archivo");
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [resultado, setResultado] = useState<{

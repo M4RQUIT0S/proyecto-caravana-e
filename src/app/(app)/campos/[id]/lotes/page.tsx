@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Layers, Plus, Trash2 } from "lucide-react";
 import { useApp } from "@/lib/context";
 import { rolEnCampo } from "@/lib/auth";
+import { puede, permisosDe } from "@/lib/permisos";
 import { uid, update } from "@/lib/storage";
 import { RAZAS, CATEGORIAS } from "@/lib/clasificacion";
 import { Modal } from "@/components/Modal";
@@ -16,7 +17,8 @@ export default function LotesPage() {
   const { db, user, refresh } = useApp();
   const lotes = db.lotes.filter((l) => l.campoId === id);
   const rol = rolEnCampo(user!.id, id);
-  const puedeEditar = rol === "admin" || rol === "usuario";
+  const miembro = db.campos.find((c) => c.id === id)?.miembros.find((m) => m.userId === user!.id);
+  const puedeEditar = puede(rol, "alta", permisosDe(miembro));
   const [open, setOpen] = useState(false);
 
   function eliminar(loteId: string) {

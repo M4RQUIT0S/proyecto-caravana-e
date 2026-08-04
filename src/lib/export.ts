@@ -47,6 +47,27 @@ function descargarBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+// Escritores compartidos por todas las exportaciones (animales y SIGSA). Aplican
+// `sanitizarFilas` acá adentro: así ninguna exportación futura puede olvidarse el
+// saneo anti-fórmula (CWE-1236). El BOM hace que Excel abra el CSV en UTF-8.
+export function descargarCSV<T extends object>(rows: T[], filename: string) {
+  const csv = Papa.unparse(sanitizarFilas(rows));
+  descargarBlob(new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8;" }), filename);
+}
+
+export function descargarXLSX<T extends object>(rows: T[], filename: string, hoja: string) {
+  const ws = XLSX.utils.json_to_sheet(sanitizarFilas(rows));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, hoja);
+  const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  descargarBlob(
+    new Blob([buf], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }),
+    filename
+  );
+}
+
 function nombreArchivo(base: string, ext: string): string {
   const d = new Date();
   const ts = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
@@ -58,10 +79,7 @@ export function exportarAnimalesCSV(
   lotes: Lote[],
   base = "animales"
 ) {
-  const rows = sanitizarFilas(animalesARows(animales, lotes));
-  const csv = Papa.unparse(rows);
-  const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8;" });
-  descargarBlob(blob, nombreArchivo(base, "csv"));
+  descargarCSV(animalesARows(animales, lotes), nombreArchivo(base, "csv"));
 }
 
 export function exportarAnimalesXLSX(
@@ -69,13 +87,5 @@ export function exportarAnimalesXLSX(
   lotes: Lote[],
   base = "animales"
 ) {
-  const rows = sanitizarFilas(animalesARows(animales, lotes));
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Animales");
-  const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([buf], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  descargarBlob(blob, nombreArchivo(base, "xlsx"));
+  descargarXLSX(animalesARows(animales, lotes), nombreArchivo(base, "xlsx"), "Animales");
 }

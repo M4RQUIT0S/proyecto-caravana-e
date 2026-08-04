@@ -3,7 +3,7 @@
 // administración de datos maestros (catálogos de eventos, productos sanitarios,
 // proveedores y datos del establecimiento). Baja lógica, unicidad de RENSPA.
 
-import { uid, update } from "./storage";
+import { loadDB, uid, update } from "./storage";
 import { colorCaravana, renspaUnico } from "./reglas";
 import type {
   CatalogoEvento,
@@ -27,15 +27,8 @@ export function guardarEstablecimiento(
   campoId: string,
   datos: DatosEstablecimiento
 ): { ok: true } | { ok: false; error: string } {
-  const db = (() => {
-    try {
-      return JSON.parse(window.localStorage.getItem("caravanas:v1") || "{}");
-    } catch {
-      return {};
-    }
-  })();
   if (datos.renspa?.trim()) {
-    const v = renspaUnico(datos.renspa, db.campos ?? [], campoId);
+    const v = renspaUnico(datos.renspa, loadDB().campos, campoId);
     if (!v.ok) return { ok: false, error: v.error! };
   }
   update((db) => {

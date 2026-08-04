@@ -86,7 +86,13 @@
       "Bash(rm -f /tmp/v.env)",
       "Bash(sed 's/\\\\\\(ANON_KEY=\"ey.\\\\{12\\\\}\\\\\\).*/\\\\1...\"/')",
       "Bash(rm -f /tmp/v.env /tmp/p.env)",
-      "Bash(grep -rnE '^\\\\s*//\\\\s*$' \"src/app/\\(app\\)/campos/[id]/animales/page.tsx\" src/lib/eventos.ts src/lib/permisos.ts src/lib/sync.ts src/lib/types.ts)"
+      "Bash(grep -rnE '^\\\\s*//\\\\s*$' \"src/app/\\(app\\)/campos/[id]/animales/page.tsx\" src/lib/eventos.ts src/lib/permisos.ts src/lib/sync.ts src/lib/types.ts)",
+      "Bash(mkdir -p manual_audit)",
+      "Bash(unzip -o \"C:/Users/marco/Downloads/Manual_Auditoria_Seguridad_Web_v1.zip\" -d manual_audit)",
+      "Bash(grep -qxF \"AUDITORIA-SEGURIDAD.md\" .gitignore)",
+      "Bash(printf '\\\\n# Informe de auditoría de seguridad \\(entregable interno — no publicar en repo público\\)\\\\nAUDITORIA-SEGURIDAD.md\\\\n')",
+      "Bash(gh repo *)",
+      "Bash(npm test *)"
     ]
   }
 }

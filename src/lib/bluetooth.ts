@@ -5,15 +5,10 @@
 const UART_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
 const UART_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"; // notify
 
-export interface BluetoothLectura {
-  raw: string;
-  appendCsv(headerIfNeeded?: string): string;
-}
-
+// El acumulado de lecturas lo mantiene la pantalla (vía onChunk); la sesión sólo
+// expone lo que hace falta para mostrarla y cerrarla.
 export interface BluetoothSesion {
   deviceName: string;
-  buffer: string;
-  onChunk: (chunk: string) => void;
   stop(): Promise<void>;
 }
 
@@ -52,20 +47,15 @@ export async function conectarLectorRFID(
     );
   }
   const decoder = new TextDecoder();
-  let buffer = "";
   const handler = (ev: any) => {
     const value = ev.target?.value as DataView | undefined;
     if (!value) return;
-    const text = decoder.decode(value);
-    buffer += text;
-    onChunk(text);
+    onChunk(decoder.decode(value));
   };
   characteristic.addEventListener("characteristicvaluechanged", handler);
   await characteristic.startNotifications();
   return {
     deviceName: device.name || "Lector RFID",
-    buffer,
-    onChunk,
     async stop() {
       try {
         characteristic.removeEventListener("characteristicvaluechanged", handler);
