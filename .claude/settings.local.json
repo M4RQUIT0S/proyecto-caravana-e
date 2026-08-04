@@ -92,7 +92,8 @@
       "Bash(grep -qxF \"AUDITORIA-SEGURIDAD.md\" .gitignore)",
       "Bash(printf '\\\\n# Informe de auditoría de seguridad \\(entregable interno — no publicar en repo público\\)\\\\nAUDITORIA-SEGURIDAD.md\\\\n')",
       "Bash(gh repo *)",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(echo \"EXIT=$?\")"
     ]
   }
 }

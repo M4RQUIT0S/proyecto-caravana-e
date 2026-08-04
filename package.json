@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-reglas.mjs"
+    "test": "npm run test:reglas && npm run test:sync",
+    "test:reglas": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/ts-resolve.mjs scripts/test-reglas.mjs",
+    "test:sync": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/ts-resolve.mjs scripts/test-sync.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
