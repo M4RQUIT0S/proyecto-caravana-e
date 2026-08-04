@@ -76,9 +76,14 @@ export async function login(identificador: string, password: string): Promise<Au
   const sb = supabase();
   let email = identificador.trim();
   if (!email.includes("@")) {
-    // Login por nombre de usuario: resolvemos su email vía RPC.
-    const { data } = await sb.rpc("email_for_username", { p_username: email });
-    if (!data) return { ok: false, error: "Usuario no encontrado." };
+    // Login por nombre de usuario: el RPC devuelve el email SÓLO si la contraseña también
+    // es correcta (antes bastaba el username, y así se podían cosechar los correos).
+    // El error es genérico a propósito: no confirma si el usuario existe.
+    const { data } = await sb.rpc("email_para_login", {
+      p_username: email,
+      p_password: password,
+    });
+    if (!data) return { ok: false, error: "Email o contraseña incorrectos." };
     email = data as string;
   }
 

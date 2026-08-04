@@ -186,10 +186,60 @@ end $$;
 -- RPCs (operaciones que cruzan la frontera de RLS de forma controlada)
 -- ============================================================================
 
-create or replace function public.email_for_username(p_username text)
-returns text language sql stable security definer set search_path = public as $$
-  select email from public.profiles where lower(username) = lower(p_username) limit 1;
-$$;
+-- Login por nombre de usuario: resuelve el email para pasárselo a signInWithPassword.
+--
+-- La versión anterior (`email_for_username`) devolvía el email con sólo pasarle el
+-- username, y era ejecutable por `anon`: cualquiera podía recorrer nombres de usuario y
+-- cosechar los correos de todas las cuentas. Ahora hay que acertar también la contraseña,
+-- con lo cual el email sólo se le revela a quien ya es esa persona.
+--
+-- El precio de verificar la contraseña acá es que este RPC NO pasa por el rate-limit de
+-- GoTrue: sin freno sería un oráculo para adivinar contraseñas a máquina. De ahí el
+-- contador de intentos por usuario.
+create extension if not exists pgcrypto with schema extensions;
+
+create table if not exists private.login_intentos (
+  username text primary key,
+  intentos int not null default 0,
+  desde timestamptz not null default now()
+);
+
+create or replace function public.email_para_login(p_username text, p_password text)
+returns text language plpgsql volatile security definer
+set search_path = public, extensions as $$
+declare
+  v_user text := lower(trim(coalesce(p_username, '')));
+  v_email text;
+  v_intentos int;
+begin
+  if v_user = '' or coalesce(p_password, '') = '' then return null; end if;
+
+  -- 10 intentos por usuario cada 15 minutos.
+  insert into private.login_intentos as li (username, intentos, desde)
+    values (v_user, 1, now())
+  on conflict (username) do update set
+    intentos = case when li.desde < now() - interval '15 minutes' then 1 else li.intentos + 1 end,
+    desde    = case when li.desde < now() - interval '15 minutes' then now() else li.desde end
+  returning li.intentos into v_intentos;
+
+  if v_intentos > 10 then return null; end if;
+
+  -- Sin contraseña correcta no se devuelve nada. `encrypted_password` es null para las
+  -- cuentas que sólo entran con Google: ésas tienen que usar el botón de Google.
+  select u.email into v_email
+  from public.profiles p
+  join auth.users u on u.id = p.id
+  where lower(p.username) = v_user
+    and u.encrypted_password is not null
+    and u.encrypted_password = crypt(p_password, u.encrypted_password)
+  limit 1;
+
+  if v_email is not null then
+    delete from private.login_intentos where username = v_user;
+  end if;
+
+  return v_email;
+end $$;
 
 -- Disponibilidad de username para el registro. Devuelve SÓLO un booleano: a diferencia
 -- de un SELECT directo sobre profiles, no permite enumerar ni leer emails.
@@ -244,14 +294,18 @@ begin
   return v_inv.campo_id;
 end; $$;
 
--- email_for_username es intencionalmente anónima (login por username → resuelve el email).
--- unirme/aceptar son sólo para usuarios autenticados: se les quita anon y PUBLIC para que
--- no queden expuestas a anónimos por el grant por defecto de CREATE FUNCTION.
-revoke execute on function public.email_for_username(text) from public;
+-- email_para_login y username_disponible son anónimas por necesidad (se usan ANTES de
+-- tener sesión: login por username y alta de cuenta). unirme/aceptar son sólo para
+-- usuarios autenticados: se les quita anon y PUBLIC para que no queden expuestas a
+-- anónimos por el grant por defecto de CREATE FUNCTION.
+-- La vieja email_for_username se elimina: devolvía el correo a cambio de nada más que el
+-- nombre de usuario (cosecha de emails por anónimos).
+drop function if exists public.email_for_username(text);
+revoke execute on function public.email_para_login(text, text) from public;
 revoke execute on function public.username_disponible(text) from public;
 revoke execute on function public.unirme_con_codigo(text) from public, anon;
 revoke execute on function public.aceptar_invitacion(text) from public, anon;
-grant execute on function public.email_for_username(text) to anon, authenticated;
+grant execute on function public.email_para_login(text, text) to anon, authenticated;
 grant execute on function public.username_disponible(text) to anon, authenticated;
 grant execute on function public.unirme_con_codigo(text) to authenticated;
 grant execute on function public.aceptar_invitacion(text) to authenticated;
