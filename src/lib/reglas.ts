@@ -334,3 +334,10 @@ function redondear(n: number, dec: number): number {
 export function hoyISO(): string {
   return toISO(new Date());
 }
+
+// Fecha local (yyyy-mm-dd) de un timestamp. NO usar toISOString(): devuelve la fecha en
+// UTC, así que en Argentina (UTC-3) todo lo registrado después de las 21:00 se exportaba
+// con el día siguiente — y acá la fecha del hecho es el dato regulado.
+export function fechaISO(ts: number): string {
+  return toISO(new Date(ts));
+}

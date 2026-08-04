@@ -26,7 +26,7 @@ import { rolEnCampo } from "@/lib/auth";
 import { uid, update } from "@/lib/storage";
 import { Modal } from "@/components/Modal";
 import { TonoBadge, type Tono } from "@/components/Tono";
-import { exportarAnimalesCSV, exportarAnimalesXLSX } from "@/lib/export";
+import { descargarCSV, exportarAnimalesCSV, exportarAnimalesXLSX } from "@/lib/export";
 import {
   caravanaUnicaActiva,
   colorCaravana,
@@ -35,7 +35,7 @@ import {
   validarFormatoCII,
 } from "@/lib/reglas";
 import { validarAltaCoherencia, historialDeAnimal, aptitud } from "@/lib/eventos";
-import { estado as estadoAnimal } from "@/lib/reglas";
+import { estado as estadoAnimal, fechaISO } from "@/lib/reglas";
 import { puede, permisosDe } from "@/lib/permisos";
 import { RAZAS, CATEGORIAS } from "@/lib/clasificacion";
 import type { Animal, Alerta } from "@/lib/types";
@@ -978,21 +978,17 @@ function HistorialTimeline({
   const items = filtro === "todos" ? all : all.filter((it) => it.tipo === filtro);
 
   function exportar() {
-    const filas = all.map((it) => ({
-      fecha: it.fecha ?? new Date(it.fechaHora).toISOString().slice(0, 10),
-      tipo: it.tipo,
-      detalle: `${it.titulo}${it.detalle ? ` — ${it.detalle}` : ""}`.replace(/"/g, "'"),
-    }));
-    const csv = "fecha,tipo,detalle\n" + filas.map((f) => `${f.fecha},${f.tipo},"${f.detalle}"`).join("\n");
-    const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `historial-${caravana}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Pasa por descargarCSV como el resto: aplica el saneo anti-fórmula (el detalle lleva
+    // texto libre del usuario) y deja el escapado en manos de Papa, que sabe de comillas
+    // y saltos de línea. Antes se armaba el CSV a mano y ninguna de las dos cosas pasaba.
+    descargarCSV(
+      all.map((it) => ({
+        fecha: it.fecha ?? fechaISO(it.fechaHora),
+        tipo: it.tipo,
+        detalle: `${it.titulo}${it.detalle ? ` — ${it.detalle}` : ""}`,
+      })),
+      `historial-${caravana}.csv`
+    );
   }
 
   return (

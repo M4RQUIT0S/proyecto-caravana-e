@@ -111,10 +111,13 @@ export default function UsuariosPage() {
           Miembros
         </div>
         <ul>
+          {/* El perfil del dueño puede no estar en el caché todavía (la consulta a
+              profiles va aparte de la de campos). Antes se accedía con `!` y la página
+              entera reventaba en pantalla blanca. */}
           <Miembro
-            key={owner!.id}
-            username={owner!.username}
-            email={owner!.email}
+            key={campo.ownerId}
+            username={owner?.username || "—"}
+            email={owner?.email || "Perfil no disponible"}
             rol="admin"
             tag="Dueño"
           />

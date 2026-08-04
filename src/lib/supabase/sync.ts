@@ -159,12 +159,22 @@ function diffById<T extends { id: string }>(
 // `error` dentro de la respuesta. Si no se mira ese campo, un rechazo pasa totalmente
 // inadvertido y el cambio queda sólo en localStorage hasta que la próxima hydrate() lo
 // pisa. Toda escritura pasa por acá para convertir ese `error` en una excepción real.
+// Rechazo del servidor: no se arregla reintentando solo (hace falta permiso, corregir el
+// dato o volver a entrar). Se distingue de una caída de red, que sí se resuelve sola.
+export class RechazoServidor extends Error {}
+
 async function exigir(
-  op: PromiseLike<{ error: { message: string } | null }>,
+  op: PromiseLike<{ error: { message: string } | null; status: number }>,
   que: string
 ): Promise<void> {
-  const { error } = await op;
-  if (error) throw new Error(`${que}: ${error.message}`);
+  const { error, status } = await op;
+  if (!error) return;
+  // supabase-js también envuelve la caída de red en `error`, así que el mensaje no
+  // alcanza para distinguirla. El que sí distingue es el status: 0 significa que el
+  // fetch nunca llegó a completarse (sin señal); con cualquier status el servidor
+  // contestó y rechazó, que es lo único que no se arregla reintentando solo.
+  if (!status) throw new Error(`${que}: ${error.message}`);
+  throw new RechazoServidor(`${que}: ${error.message}`);
 }
 
 export async function pushDiff(prev: DBShape, next: DBShape): Promise<void> {
@@ -173,7 +183,12 @@ export async function pushDiff(prev: DBShape, next: DBShape): Promise<void> {
   const {
     data: { session },
   } = await sb.auth.getSession();
-  if (!session) return;
+  // Sin sesión no hay a dónde escribir. Antes se devolvía en silencio y el cambio moría
+  // en localStorage: si el token vence con la app abierta, lo editado se perdía sin aviso.
+  if (!session)
+    throw new RechazoServidor(
+      "la sesión expiró — volvé a iniciar sesión para guardar los cambios"
+    );
 
   const now = () => new Date().toISOString();
   const campoRow = (campo: any) => ({
@@ -220,9 +235,15 @@ let registrado = false;
 let cola: Promise<void> = Promise.resolve();
 let pendientes = 0;
 
-// Último push rechazado por el servidor, y el estado desde el que hay que reintentar.
-// Mientras esto no sea null hay cambios que viven SÓLO en este navegador.
+// Estado del último push que no llegó al servidor, y la base desde la cual reintentar.
+// Se separan dos causas porque ameritan reacciones distintas:
+//   - `fallo`: el servidor lo RECHAZÓ (RLS, validación, sesión vencida). No se arregla
+//     solo: hay que avisarle a la persona.
+//   - `sinRed`: no hubo conexión. Es el modo de trabajo normal en el campo, así que no
+//     se alarma a nadie: se reintenta apenas vuelve la señal.
+// Mientras cualquiera de los dos esté activo hay cambios que viven SÓLO en este navegador.
 let fallo: string | null = null;
+let sinRed = false;
 let baseFallo: DBShape | null = null;
 
 function avisar() {
@@ -230,60 +251,69 @@ function avisar() {
     window.dispatchEvent(new CustomEvent("caravanas:sync"));
 }
 
+// Sólo los rechazos del servidor se muestran; la falta de red la cubre el indicador de
+// conectividad que ya tiene la app.
 export function errorSync(): string | null {
   return fallo;
 }
 
-// True mientras haya cambios locales que el servidor todavía no confirmó: pushes en
-// vuelo o un push rechazado. La re-hidratación en segundo plano lo consulta para no
-// pisar con los datos del servidor algo que acá no llegó a guardarse.
+// True mientras haya cambios locales que el servidor todavía no confirmó. La
+// re-hidratación en segundo plano lo consulta para no pisar con los datos del servidor
+// algo que acá no llegó a guardarse.
 export function syncOcupado(): boolean {
-  return pendientes > 0 || fallo !== null;
+  return pendientes > 0 || fallo !== null || sinRed;
 }
 
-// Reintenta desde el último estado confirmado, así arrastra también todo lo que se
-// editó después del fallo. Devuelve si quedó todo sincronizado.
-export async function reintentarSync(): Promise<boolean> {
-  if (!fallo || !baseFallo) return true;
+// Todo push pasa por esta cola —incluidos los reintentos— para que no se pisen entre sí
+// y se respete el orden (el campo se inserta antes que sus animales, por la FK).
+// `siguiente` es una función porque el reintento tiene que leer el estado del momento en
+// que le toca el turno, no el de cuando se encoló.
+function encolar(base: DBShape, siguiente: () => DBShape): Promise<boolean> {
   pendientes++;
-  try {
-    await pushDiff(baseFallo, loadDB());
-    baseFallo = null;
-    fallo = null;
-    return true;
-  } catch (e) {
-    fallo = e instanceof Error ? e.message : String(e);
-    return false;
-  } finally {
-    pendientes--;
-    avisar();
-  }
+  // Si quedó un fallo sin resolver, el diff arranca de ahí: empujar sólo desde `base`
+  // dejaría afuera los cambios que el servidor ya había rechazado.
+  const intento = cola
+    .then(async () => {
+      await pushDiff(baseFallo ?? base, siguiente());
+      baseFallo = null;
+      fallo = null;
+      sinRed = false;
+      return true;
+    })
+    .catch((e: unknown) => {
+      baseFallo ??= base;
+      if (e instanceof RechazoServidor) {
+        fallo = e.message;
+        console.error("[supabase] push rechazado:", e);
+      } else {
+        // Caída de red (fetch no resuelve): normal sin señal, se reintenta al volver.
+        sinRed = true;
+      }
+      return false;
+    })
+    .finally(() => {
+      pendientes--;
+      avisar();
+    });
+  cola = intento.then(() => {});
+  return intento;
+}
+
+// Reintenta desde el último estado confirmado, arrastrando también lo editado después
+// del fallo. Devuelve si quedó todo sincronizado.
+export function reintentarSync(): Promise<boolean> {
+  if (!fallo && !sinRed) return Promise.resolve(true);
+  return encolar(baseFallo ?? loadDB(), loadDB);
 }
 
 export function activarSync(): void {
   if (registrado) return;
   registrado = true;
   setSyncHook((prev, next) => {
-    pendientes++;
-    cola = cola
-      // Si hay un fallo anterior sin resolver, el diff se calcula desde ahí: si sólo se
-      // empujara `prev`, los cambios rechazados quedarían fuera del intento siguiente.
-      .then(async () => {
-        await pushDiff(baseFallo ?? prev, next);
-        if (fallo) {
-          baseFallo = null;
-          fallo = null;
-          avisar();
-        }
-      })
-      .catch((e) => {
-        baseFallo ??= prev;
-        fallo = e instanceof Error ? e.message : String(e);
-        console.error("[supabase] push rechazado:", e);
-        avisar();
-      })
-      .finally(() => {
-        pendientes--;
-      });
+    void encolar(prev, () => next);
   });
+  // Al volver la señal se sube solo lo que quedó pendiente: sin esto, un cambio hecho
+  // sin conexión se quedaba esperando a la próxima edición para intentar subir.
+  if (typeof window !== "undefined")
+    window.addEventListener("online", () => void reintentarSync());
 }

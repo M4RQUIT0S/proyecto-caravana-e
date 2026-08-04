@@ -4,9 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Loader2, RefreshCw } from "lucide-react";
 import { errorSync, reintentarSync } from "@/lib/supabase/sync";
 
-// Aviso de cambios que el servidor rechazó (RLS, validación de la base, red). Sin esto
-// el cambio queda sólo en este navegador y desaparece en la próxima recarga sin que
+// Aviso de cambios que el servidor RECHAZÓ (permisos, validación, sesión vencida). Sin
+// esto el cambio queda sólo en este navegador y desaparece en la próxima recarga sin que
 // nadie se entere. Se muestra hasta que el reintento salga bien.
+// Trabajar sin señal NO pasa por acá: eso lo cubre el indicador de conectividad y se
+// reintenta solo al volver la red (ver sync.ts).
 export function SyncBanner() {
   const [error, setError] = useState<string | null>(null);
   const [reintentando, setReintentando] = useState(false);

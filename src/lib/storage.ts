@@ -64,10 +64,16 @@ export function update<T>(fn: (db: DBShape) => T): T {
   return result;
 }
 
+// Id de entidad. Es la clave primaria en Postgres y la generan varios dispositivos sin
+// coordinarse, así que se usa randomUUID (CSPRNG) en vez de Math.random: dos equipos
+// cargando animales a la vez no pueden chocar. El prefijo queda sólo para poder leer de
+// un vistazo de qué tabla es un id; nadie lo parsea.
 export function uid(prefix = ""): string {
-  const rand = Math.random().toString(36).slice(2, 8);
-  const time = Date.now().toString(36).slice(-4);
-  return `${prefix}${time}${rand}`;
+  if (crypto.randomUUID) return `${prefix}${crypto.randomUUID()}`;
+  // randomUUID exige contexto seguro y no lo hay al probar desde el celular por IP de
+  // LAN (http://192.168.x.x:3000). getRandomValues sí anda ahí, y da lo mismo.
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  return `${prefix}${Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("")}`;
 }
 
 export function codigoCampo(): string {

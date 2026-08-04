@@ -42,6 +42,8 @@ globalThis.fetch = async (url, init = {}) => {
     return new Response("[]", { status: 200, headers: { "content-type": "application/json" } });
   }
   escrituras.push({ metodo, ruta });
+  // `red: false` imita estar sin señal: fetch no resuelve, no hay respuesta HTTP.
+  if (respuesta.red === false) throw new TypeError("Failed to fetch");
   return new Response(JSON.stringify(respuesta.body), {
     status: respuesta.status,
     headers: { "content-type": "application/json" },
@@ -56,6 +58,7 @@ const RECHAZO_RLS = {
   },
 };
 const ACEPTADO = { status: 201, body: [] };
+const SIN_RED = { red: false };
 
 const { supabase } = await import("../src/lib/supabase/client.ts");
 const { activarSync, errorSync, pushDiff, reintentarSync, syncOcupado } = await import(
@@ -140,11 +143,38 @@ assert.ok(
   "el reintento debe reenviar los costos, no dar por perdido el diff"
 );
 
-// ---------- 5. Sin sesión no se empuja nada (y no explota) ----------
-escrituras.length = 0;
+// ---------- 5. Sin señal NO se alarma, pero tampoco se da por guardado ----------
+// Trabajar sin conexión es el uso normal en el campo: no corresponde banner rojo, pero
+// la re-hidratación no puede pisar lo que todavía no subió.
+console.error = () => {};
+respuesta = SIN_RED;
+update((db) => {
+  db.costos.push(costo("cost_4"));
+});
+await drenar();
+
+assert.equal(errorSync(), null, "quedarse sin señal no es un error que haya que mostrar");
+assert.equal(syncOcupado(), true, "pero el cambio sigue sin confirmar: no se puede re-hidratar");
+
+// Al volver la red, el reintento sube lo que había quedado.
+respuesta = ACEPTADO;
+assert.equal(await reintentarSync(), true);
+assert.equal(syncOcupado(), false, "recuperada la red, ya no queda nada pendiente");
+
+// ---------- 6. Sesión vencida: se avisa, no se pierde en silencio ----------
 sb.auth.getSession = async () => ({ data: { session: null }, error: null });
-await assert.doesNotReject(() => pushDiff(vacia(), conCosto));
-assert.equal(escrituras.length, 0, "sin sesión no debe escribir");
+await assert.rejects(
+  () => pushDiff(vacia(), conCosto),
+  /sesión expiró/,
+  "sin sesión hay que avisar, no devolver en silencio"
+);
+
+update((db) => {
+  db.costos.push(costo("cost_5"));
+});
+await drenar();
+assert.match(errorSync() ?? "", /sesión expiró/, "el aviso de sesión vencida llega al banner");
+console.error = errorReal;
 
 console.log("OK — los rechazos del servidor se propagan, se avisan y se reintentan.");
 

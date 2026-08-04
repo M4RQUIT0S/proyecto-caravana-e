@@ -93,7 +93,8 @@
       "Bash(printf '\\\\n# Informe de auditoría de seguridad \\(entregable interno — no publicar en repo público\\)\\\\nAUDITORIA-SEGURIDAD.md\\\\n')",
       "Bash(gh repo *)",
       "Bash(npm test *)",
-      "Bash(echo \"EXIT=$?\")"
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(grep -rn 'join\\(\",\"\\)\\\\|\"fecha,tipo\\\\|\\\\.csv`' src/)"
     ]
   }
 }
