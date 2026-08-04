@@ -155,6 +155,18 @@ function diffById<T extends { id: string }>(
   return { inserts, updates, deleteIds };
 }
 
+// supabase-js NO lanza cuando Postgres rechaza (RLS, FK, trigger): devuelve el fallo en
+// `error` dentro de la respuesta. Si no se mira ese campo, un rechazo pasa totalmente
+// inadvertido y el cambio queda sólo en localStorage hasta que la próxima hydrate() lo
+// pisa. Toda escritura pasa por acá para convertir ese `error` en una excepción real.
+async function exigir(
+  op: PromiseLike<{ error: { message: string } | null }>,
+  que: string
+): Promise<void> {
+  const { error } = await op;
+  if (error) throw new Error(`${que}: ${error.message}`);
+}
+
 export async function pushDiff(prev: DBShape, next: DBShape): Promise<void> {
   if (!supabaseConfigurado()) return;
   const sb = supabase();
@@ -175,29 +187,30 @@ export async function pushDiff(prev: DBShape, next: DBShape): Promise<void> {
   const dataRow = (obj: any) => ({ id: obj.id, campo_id: obj.campoId, data: obj, updated_at: now() });
   const invRow = (i: any) => ({ id: i.id, campo_id: i.campoId, email: i.email, data: i });
 
-  try {
-    // campos (insert primero para respetar FK de las tablas de datos)
-    const c = diffById(prev.campos, next.campos);
-    if (c.inserts.length) await sb.from("campos").insert(c.inserts.map(campoRow));
-    for (const campo of c.updates) await sb.from("campos").update(campoRow(campo)).eq("id", campo.id);
-    if (c.deleteIds.length) await sb.from("campos").delete().in("id", c.deleteIds);
+  // campos (insert primero para respetar FK de las tablas de datos)
+  const c = diffById(prev.campos, next.campos);
+  if (c.inserts.length) await exigir(sb.from("campos").insert(c.inserts.map(campoRow)), "campos");
+  for (const campo of c.updates)
+    await exigir(sb.from("campos").update(campoRow(campo)).eq("id", campo.id), "campos");
+  if (c.deleteIds.length) await exigir(sb.from("campos").delete().in("id", c.deleteIds), "campos");
 
-    // colecciones simples
-    for (const t of DATA_TABLES) {
-      const d = diffById((prev as any)[t], (next as any)[t]);
-      if (d.inserts.length) await sb.from(t).insert(d.inserts.map(dataRow));
-      for (const obj of d.updates) await sb.from(t).update(dataRow(obj)).eq("id", (obj as any).id);
-      if (d.deleteIds.length) await sb.from(t).delete().in("id", d.deleteIds);
-    }
-
-    // invitaciones
-    const inv = diffById(prev.invitaciones, next.invitaciones);
-    if (inv.inserts.length) await sb.from("invitaciones").insert(inv.inserts.map(invRow));
-    for (const i of inv.updates) await sb.from("invitaciones").update(invRow(i)).eq("id", i.id);
-    if (inv.deleteIds.length) await sb.from("invitaciones").delete().in("id", inv.deleteIds);
-  } catch (e) {
-    console.error("[supabase] pushDiff error:", e);
+  // colecciones simples
+  for (const t of DATA_TABLES) {
+    const d = diffById((prev as any)[t], (next as any)[t]);
+    if (d.inserts.length) await exigir(sb.from(t).insert(d.inserts.map(dataRow)), t);
+    for (const obj of d.updates)
+      await exigir(sb.from(t).update(dataRow(obj)).eq("id", (obj as any).id), t);
+    if (d.deleteIds.length) await exigir(sb.from(t).delete().in("id", d.deleteIds), t);
   }
+
+  // invitaciones
+  const inv = diffById(prev.invitaciones, next.invitaciones);
+  if (inv.inserts.length)
+    await exigir(sb.from("invitaciones").insert(inv.inserts.map(invRow)), "invitaciones");
+  for (const i of inv.updates)
+    await exigir(sb.from("invitaciones").update(invRow(i)).eq("id", i.id), "invitaciones");
+  if (inv.deleteIds.length)
+    await exigir(sb.from("invitaciones").delete().in("id", inv.deleteIds), "invitaciones");
 }
 
 // Registrar el hook para que cada update() local empuje su diff a Supabase.
@@ -207,10 +220,44 @@ let registrado = false;
 let cola: Promise<void> = Promise.resolve();
 let pendientes = 0;
 
-// True mientras haya pushes locales en vuelo. La re-hidratación en segundo plano lo
-// consulta para no pisar cambios optimistas que todavía no llegaron a Supabase.
+// Último push rechazado por el servidor, y el estado desde el que hay que reintentar.
+// Mientras esto no sea null hay cambios que viven SÓLO en este navegador.
+let fallo: string | null = null;
+let baseFallo: DBShape | null = null;
+
+function avisar() {
+  if (typeof window !== "undefined")
+    window.dispatchEvent(new CustomEvent("caravanas:sync"));
+}
+
+export function errorSync(): string | null {
+  return fallo;
+}
+
+// True mientras haya cambios locales que el servidor todavía no confirmó: pushes en
+// vuelo o un push rechazado. La re-hidratación en segundo plano lo consulta para no
+// pisar con los datos del servidor algo que acá no llegó a guardarse.
 export function syncOcupado(): boolean {
-  return pendientes > 0;
+  return pendientes > 0 || fallo !== null;
+}
+
+// Reintenta desde el último estado confirmado, así arrastra también todo lo que se
+// editó después del fallo. Devuelve si quedó todo sincronizado.
+export async function reintentarSync(): Promise<boolean> {
+  if (!fallo || !baseFallo) return true;
+  pendientes++;
+  try {
+    await pushDiff(baseFallo, loadDB());
+    baseFallo = null;
+    fallo = null;
+    return true;
+  } catch (e) {
+    fallo = e instanceof Error ? e.message : String(e);
+    return false;
+  } finally {
+    pendientes--;
+    avisar();
+  }
 }
 
 export function activarSync(): void {
@@ -219,9 +266,21 @@ export function activarSync(): void {
   setSyncHook((prev, next) => {
     pendientes++;
     cola = cola
-      .then(() => pushDiff(prev, next))
+      // Si hay un fallo anterior sin resolver, el diff se calcula desde ahí: si sólo se
+      // empujara `prev`, los cambios rechazados quedarían fuera del intento siguiente.
+      .then(async () => {
+        await pushDiff(baseFallo ?? prev, next);
+        if (fallo) {
+          baseFallo = null;
+          fallo = null;
+          avisar();
+        }
+      })
       .catch((e) => {
-        console.error("[supabase] cola de sync:", e);
+        baseFallo ??= prev;
+        fallo = e instanceof Error ? e.message : String(e);
+        console.error("[supabase] push rechazado:", e);
+        avisar();
       })
       .finally(() => {
         pendientes--;
