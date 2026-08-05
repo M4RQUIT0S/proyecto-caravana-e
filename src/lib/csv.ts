@@ -313,6 +313,14 @@ export function crearLoteParaImport(
   return lote;
 }
 
+// Número o undefined: un "s/d", un guión o una celda vacía no deben terminar en NaN
+// (NaN se serializa como null en localStorage y rompe los cálculos de peso/ADPV).
+function numeroOUndefined(v: unknown): number | undefined {
+  if (v == null || String(v).trim() === "") return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 // Acepta M/H, Male/Female, Macho/Hembra, Toro/Vaca/Vaquillona, etc.
 function normalizarSexo(v: unknown): "M" | "H" | undefined {
   const s = String(v ?? "").trim().toLowerCase();
@@ -405,18 +413,19 @@ export function importarAnimales(
         raza: row.raza ? String(row.raza) : undefined,
         categoria: row.categoria ? String(row.categoria) : undefined,
         fechaNacimiento: row.fecha_nacimiento ? String(row.fecha_nacimiento) : undefined,
-        peso:
-          row.peso != null && row.peso !== ""
-            ? Number(row.peso)
-            : row.weight != null && row.weight !== ""
-            ? Number(row.weight)
-            : undefined,
+        peso: numeroOUndefined(row.peso ?? row.weight),
         observaciones: row.observaciones ? String(row.observaciones) : undefined,
         loteId: opts.loteId,
       };
       let animalId: string;
       if (existente) {
-        Object.assign(existente, datos, { updatedAt: now });
+        // Sólo se pisan los campos que el archivo realmente trae. Sin este filtro,
+        // reimportar una planilla con menos columnas borraba nombre/raza/peso/etc.
+        // del animal existente (Object.assign copia también los undefined).
+        const presentes = Object.fromEntries(
+          Object.entries(datos).filter(([, v]) => v !== undefined)
+        );
+        Object.assign(existente, presentes, { updatedAt: now });
         animalId = existente.id;
         actualizados++;
       } else {
@@ -427,7 +436,7 @@ export function importarAnimales(
           loteId: opts.loteId,
           caravana,
           ...datos,
-          // estado/activo iniciales para trazabilidad (RN14/RN07)
+          // estado/activo iniciales para trazabilidad
           estado: "activo",
           activo: true,
           alertas: [],

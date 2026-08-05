@@ -63,7 +63,7 @@ export default function MangaPage() {
     if (!v) return;
     setLeido(v);
     setOkMsg(null);
-    // Registra la lectura en el origen (RN22): queda disponible para asociar a un evento.
+    // Registra la lectura en el origen: queda disponible para asociar a un evento.
     registrarLectura(id, v, user!.id, sesion ? "bluetooth" : "manual", sesion?.deviceName);
     refresh();
   }
@@ -101,7 +101,7 @@ export default function MangaPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
-      {/* Indicador de modo, lo más importante de la pantalla (RNF-01 / RNF-08) */}
+      {/* Indicador de modo, lo más importante de la pantalla */}
       <div
         className={`rounded-2xl border p-4 flex items-center justify-between ${
           online

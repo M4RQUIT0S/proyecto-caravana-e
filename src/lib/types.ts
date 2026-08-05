@@ -1,12 +1,12 @@
 export type Rol = "admin" | "operador" | "usuario" | "vista";
 
-// Permisos granulares del Operador delegado (RN21 / RF-11 / RF-12).
+// Permisos granulares del Operador delegado.
 // Lo que NO está acá queda denegado al delegado: costos, reportes, SENASA y administración.
 export interface PermisosOperador {
-  capturar: boolean; // captura RFID en manga (CU-02)
-  sanidad: boolean; // registrar eventos sanitarios (CU-03)
-  pesaje: boolean; // registrar pesajes (CU-04)
-  movimiento: boolean; // registrar movimientos internos (CU-06)
+  capturar: boolean; // captura RFID en manga
+  sanidad: boolean; // registrar eventos sanitarios
+  pesaje: boolean; // registrar pesajes
+  movimiento: boolean; // registrar movimientos internos
 }
 
 export interface Usuario {
@@ -21,7 +21,7 @@ export interface MiembroCampo {
   userId: string;
   rol: Rol;
   permisos?: PermisosOperador; // sólo para rol "operador"
-  activo?: boolean; // baja lógica (RN07); undefined = activo
+  activo?: boolean; // baja lógica; undefined = activo
   addedAt: number;
 }
 
@@ -34,13 +34,13 @@ export interface Campo {
   miembros: MiembroCampo[];
   afip?: AfipCredenciales; // credenciales para el bot SIGSA (sólo localStorage)
   // Datos del establecimiento (DER: Establecimiento)
-  renspa?: string; // identificación ante SENASA (RN16, unicidad)
+  renspa?: string; // identificación ante SENASA (unicidad)
   cuig?: string; // Código Único de Identificación Ganadera
   partido?: string;
   provincia?: string;
   superficieHa?: number;
-  zonaVacunacionAftosa?: boolean; // deriva el color oficial de caravana (RN04)
-  tokenSenasa?: string; // token de sincronización simulada (RN15)
+  zonaVacunacionAftosa?: boolean; // deriva el color oficial de caravana
+  tokenSenasa?: string; // token de sincronización simulada
   createdAt: number;
 }
 
@@ -52,7 +52,7 @@ export interface Lote {
   raza: string; // ej: "Angus", "Hereford"
   tipo?: "potrero" | "corral";
   descripcion?: string;
-  activo?: boolean; // baja lógica (RN07)
+  activo?: boolean; // baja lógica
   createdAt: number;
 }
 
@@ -79,7 +79,7 @@ export interface AfipCredenciales {
   guardadoAt: number;
 }
 
-// Estado del animal como máquina de estados (RN14).
+// Estado del animal como máquina de estados.
 export type EstadoAnimal =
   | "activo"
   | "en_carencia"
@@ -93,7 +93,7 @@ export interface Animal {
   id: string;
   campoId: string;
   loteId?: string;
-  caravana: string; // CII / ID RFID (10 dígitos, RN01)
+  caravana: string; // CII / ID RFID (10 dígitos)
   nombre?: string;
   sexo?: "M" | "H";
   fechaNacimiento?: string;
@@ -102,12 +102,12 @@ export interface Animal {
   peso?: number;
   observaciones?: string;
   // Trazabilidad individual (DER: Animal + CaravanaRFID)
-  estado?: EstadoAnimal; // undefined = "activo" (RN14)
-  fechaCarenciaHasta?: string; // ISO yyyy-mm-dd, fin de carencia vigente (RN03)
-  proveedorId?: string; // origen comercial (reportes RU07)
-  colorCaravana?: string; // color oficial derivado de la zona (RN04)
+  estado?: EstadoAnimal; // undefined = "activo"
+  fechaCarenciaHasta?: string; // ISO yyyy-mm-dd, fin de carencia vigente
+  proveedorId?: string; // origen comercial (reportes)
+  colorCaravana?: string; // color oficial derivado de la zona
   canalCaptura?: CanalCaptura;
-  activo?: boolean; // baja lógica (RN07); undefined = activo
+  activo?: boolean; // baja lógica; undefined = activo
   alertas: Alerta[];
   sigsa?: DeclaracionSigsa;
   createdAt: number;
@@ -128,7 +128,7 @@ export interface Invitacion {
 
 export type TipoEvento = "sanitario" | "pesaje" | "movimiento";
 
-// CatalogoEvento: tipos normalizados de evento (RN12, sin texto libre).
+// CatalogoEvento: tipos normalizados de evento (sin texto libre).
 export interface CatalogoEvento {
   id: string;
   campoId: string;
@@ -136,11 +136,11 @@ export interface CatalogoEvento {
   codigo: string;
   descripcion: string;
   requiereProducto?: boolean; // exige producto sanitario
-  activo?: boolean; // baja lógica (RN07)
+  activo?: boolean; // baja lógica
   createdAt: number;
 }
 
-// ProductoSanitario: producto veterinario con su período de carencia (RN03).
+// ProductoSanitario: producto veterinario con su período de carencia.
 export interface ProductoSanitario {
   id: string;
   campoId: string;
@@ -148,14 +148,14 @@ export interface ProductoSanitario {
   principioActivo?: string;
   diasCarencia: number; // alimenta el cálculo de carencia
   unidadMedida?: string; // ml, cc, mg…
-  dosisMin?: number; // rango de dosis (RN20)
+  dosisMin?: number; // rango de dosis
   dosisMax?: number;
   proveedorId?: string;
   activo?: boolean;
   createdAt: number;
 }
 
-// Proveedor: origen comercial de hacienda / productos (RU07).
+// Proveedor: origen comercial de hacienda / productos.
 export interface Proveedor {
   id: string;
   campoId: string;
@@ -167,7 +167,7 @@ export interface Proveedor {
   createdAt: number;
 }
 
-// LecturaRFID: punto de captura en el origen (RN22 / RNF-01).
+// LecturaRFID: punto de captura en el origen.
 export interface LecturaRFID {
   id: string;
   campoId: string;
@@ -179,7 +179,7 @@ export interface LecturaRFID {
   latitud?: number;
   longitud?: number;
   sincronizada?: boolean;
-  contextoEventoId?: string; // evento al que se asoció (RN22)
+  contextoEventoId?: string; // evento al que se asoció
 }
 
 export type EstadoSincronizacion =
@@ -203,15 +203,15 @@ interface EventoBase {
   campoId: string;
   animalId: string; // animal protagonista
   animalesAfectados?: string[]; // carga grupal N:M (vacunación / movimiento de lote)
-  usuarioId: string; // responsable (auditoría RN10)
+  usuarioId: string; // responsable (auditoría)
   responsable?: string; // ejecutor físico, p.ej. veterinario (dato, no usuario)
-  catalogoId?: string; // tipificación desde catálogo (RN12)
+  catalogoId?: string; // tipificación desde catálogo
   lecturaId?: string; // lectura RFID que lo originó (opcional)
   fechaHora: number;
   fecha?: string; // ISO yyyy-mm-dd del hecho
   observacion?: string;
   estadoSincronizacion: EstadoSincronizacion;
-  activo?: boolean; // baja lógica (RN07)
+  activo?: boolean; // baja lógica
   createdAt: number;
 }
 
@@ -223,7 +223,7 @@ export interface EventoSanitario extends EventoBase {
   unidadDosis?: string;
   viaAplicacion?: ViaAplicacion;
   diasCarencia: number;
-  fechaFinCarencia?: string; // ISO yyyy-mm-dd (RN03)
+  fechaFinCarencia?: string; // ISO yyyy-mm-dd
 }
 
 export interface Pesaje extends EventoBase {
@@ -231,8 +231,8 @@ export interface Pesaje extends EventoBase {
   pesoKg: number;
   pesoAnteriorKg?: number;
   diasEntrePesajes?: number;
-  adpv?: number; // ganancia diaria de peso vivo (RN13)
-  fueraDeRango?: boolean; // RN08
+  adpv?: number; // ganancia diaria de peso vivo
+  fueraDeRango?: boolean;
 }
 
 export type SubtipoMovimiento = "interno" | "externo";
@@ -244,13 +244,13 @@ export interface Movimiento extends EventoBase {
   loteOrigenId?: string;
   loteDestinoId?: string;
   destinoExterno?: string;
-  requiereDTe?: boolean; // movimiento externo exige documentación (RN06)
+  requiereDTe?: boolean; // movimiento externo exige documentación
   documentoId?: string;
 }
 
 export type Evento = EventoSanitario | Pesaje | Movimiento;
 
-// DocumentoTransito: DT-e u otro respaldo de movimiento externo (RN06).
+// DocumentoTransito: DT-e u otro respaldo de movimiento externo.
 export interface DocumentoTransito {
   id: string;
   campoId: string;
@@ -266,7 +266,7 @@ export interface DocumentoTransito {
   createdAt: number;
 }
 
-// SincronizacionSENASA: resultado de cada envío/validación (RN15 / RNF-04).
+// SincronizacionSENASA: resultado de cada envío/validación.
 export interface SincronizacionSENASA {
   id: string;
   campoId: string;
@@ -286,7 +286,7 @@ export type TipoCosto =
   | "reposicion"
   | "otro";
 
-// CostoAnimal: costos imputados para análisis de rentabilidad (RU07).
+// CostoAnimal: costos imputados para análisis de rentabilidad.
 export interface CostoAnimal {
   id: string;
   campoId: string;

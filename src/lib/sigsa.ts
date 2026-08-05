@@ -1,9 +1,9 @@
 "use client";
 
-import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import { descargarCSV, descargarXLSX } from "./export";
+import { cifrarSecreto } from "./secure-store";
 import type { Animal, AfipCredenciales, Lote } from "./types";
-import { update } from "./storage";
+import { loadDB, update } from "./storage";
 
 export interface SigsaRow {
   acta: string;
@@ -56,17 +56,6 @@ function animalesARowsSigsa(animales: Animal[], acta: string): SigsaRow[] {
   }));
 }
 
-function descargarBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
 function nombreArchivoSigsa(loteNombre: string, ext: string): string {
   const slug =
     loteNombre
@@ -88,10 +77,7 @@ export function exportarPendientesCSV(
   loteNombre: string,
   acta: string
 ) {
-  const rows = animalesARowsSigsa(animales, acta);
-  const csv = Papa.unparse(rows);
-  const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8;" });
-  descargarBlob(blob, nombreArchivoSigsa(loteNombre, "csv"));
+  descargarCSV(animalesARowsSigsa(animales, acta), nombreArchivoSigsa(loteNombre, "csv"));
 }
 
 export function exportarPendientesXLSX(
@@ -99,15 +85,11 @@ export function exportarPendientesXLSX(
   loteNombre: string,
   acta: string
 ) {
-  const rows = animalesARowsSigsa(animales, acta);
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "SIGSA");
-  const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([buf], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  descargarBlob(blob, nombreArchivoSigsa(loteNombre, "xlsx"));
+  descargarXLSX(
+    animalesARowsSigsa(animales, acta),
+    nombreArchivoSigsa(loteNombre, "xlsx"),
+    "SIGSA"
+  );
 }
 
 export interface MarcadoResultado {
@@ -140,16 +122,18 @@ export function marcarComoDeclarados(
   return { marcados, yaDeclarados };
 }
 
-export function guardarCredencialesAfip(
+export async function guardarCredencialesAfip(
   campoId: string,
   cuit: string,
   clave: string
 ) {
   const limpio = cuit.replace(/\D/g, "");
+  // La Clave Fiscal se cifra en reposo (AES-GCM, clave de dispositivo en IndexedDB).
+  const claveCifrada = await cifrarSecreto(clave);
   update((db) => {
     const c = db.campos.find((x) => x.id === campoId);
     if (!c) return;
-    c.afip = { cuit: limpio, clave, guardadoAt: Date.now() };
+    c.afip = { cuit: limpio, clave: claveCifrada, guardadoAt: Date.now() };
   });
 }
 
@@ -162,16 +146,7 @@ export function borrarCredencialesAfip(campoId: string) {
 }
 
 export function obtenerCredencialesAfip(campoId: string): AfipCredenciales | undefined {
-  if (typeof window === "undefined") return undefined;
-  try {
-    const raw = window.localStorage.getItem("caravanas:v1");
-    if (!raw) return undefined;
-    const db = JSON.parse(raw);
-    const c = db.campos?.find((x: { id: string }) => x.id === campoId);
-    return c?.afip;
-  } catch {
-    return undefined;
-  }
+  return loadDB().campos.find((c) => c.id === campoId)?.afip;
 }
 
 export function formatCuit(cuit: string): string {

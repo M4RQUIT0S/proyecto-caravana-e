@@ -48,7 +48,7 @@ export default function CatalogosPage() {
   if (!puede(rol, "catalogos")) {
     return (
       <div className="card p-10 text-center text-ink-muted">
-        Sólo el Productor puede administrar los catálogos del establecimiento (RN11).
+        Sólo el Productor puede administrar los catálogos del establecimiento.
       </div>
     );
   }
@@ -56,8 +56,8 @@ export default function CatalogosPage() {
   return (
     <div className="space-y-5">
       <p className="text-sm text-ink-muted max-w-2xl">
-        Datos maestros del establecimiento. Estandarizan la carga (RN12, sin texto libre) y
-        son precondición de las altas, eventos sanitarios y movimientos (CU-10).
+        Datos maestros del establecimiento. Estandarizan la carga (sin texto libre) y
+        son precondición de las altas, eventos sanitarios y movimientos.
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -121,7 +121,7 @@ function Establecimiento({ campoId, onSaved }: { campoId: string; onSaved: () =>
   return (
     <form onSubmit={guardar} className="card p-5 space-y-4 max-w-2xl">
       <div className="grid sm:grid-cols-2 gap-3">
-        <Campo label="RENSPA" hint="Identificación ante SENASA (única, RN16)">
+        <Campo label="RENSPA" hint="Identificación ante SENASA (única)">
           <input
             className="input"
             value={form.renspa}
@@ -158,7 +158,7 @@ function Establecimiento({ campoId, onSaved }: { campoId: string; onSaved: () =>
             onChange={(e) => setForm({ ...form, superficieHa: e.target.value })}
           />
         </Campo>
-        <Campo label="Token SENASA" hint="Para sincronizar (RN15)">
+        <Campo label="Token SENASA" hint="Para sincronizar">
           <input
             className="input"
             value={form.tokenSenasa}
@@ -181,7 +181,7 @@ function Establecimiento({ campoId, onSaved }: { campoId: string; onSaved: () =>
           Zona con vacunación antiaftosa
         </label>
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-ink-muted">Color oficial de caravana (RN04):</span>
+          <span className="text-ink-muted">Color oficial de caravana:</span>
           <span
             className={`chip uppercase ${
               color === "blanco"
@@ -347,7 +347,7 @@ function Productos({ campoId, onChange }: { campoId: string; onChange: () => voi
               onChange={(e) => setForm({ ...form, principioActivo: e.target.value })}
             />
           </Campo>
-          <Campo label="Días de carencia (RN03)">
+          <Campo label="Días de carencia">
             <input
               className="input"
               type="number"
@@ -362,7 +362,7 @@ function Productos({ campoId, onChange }: { campoId: string; onChange: () => voi
               onChange={(e) => setForm({ ...form, unidadMedida: e.target.value })}
             />
           </Campo>
-          <Campo label="Dosis mín. (RN20)">
+          <Campo label="Dosis mín.">
             <input
               className="input"
               type="number"
@@ -370,7 +370,7 @@ function Productos({ campoId, onChange }: { campoId: string; onChange: () => voi
               onChange={(e) => setForm({ ...form, dosisMin: e.target.value })}
             />
           </Campo>
-          <Campo label="Dosis máx. (RN20)">
+          <Campo label="Dosis máx.">
             <input
               className="input"
               type="number"
@@ -530,7 +530,7 @@ function ListaSimple({
             <button
               onClick={it.onDelete}
               className="text-ink-dim hover:text-error"
-              title="Desactivar (baja lógica, RN07)"
+              title="Desactivar (baja lógica)"
             >
               <Trash2 size={15} />
             </button>

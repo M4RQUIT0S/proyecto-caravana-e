@@ -1,8 +1,8 @@
 "use client";
 
-// CU-08: sincronización con SENASA. Acorde a la exclusión E-05, la API oficial no existe:
-// el sistema prepara el paquete y simula el envío con token (RN15), deja log/auditoría
-// (RN10 / RNF-04) y conserva la cola sin pérdida con reintento (RNF-08 / RN23).
+// sincronización con SENASA. Acorde a la exclusión, la API oficial no existe:
+// el sistema prepara el paquete y simula el envío con token, deja log/auditoría
+// y conserva la cola sin pérdida con reintento.
 
 import { loadDB, uid, update } from "./storage";
 import { tokenValido } from "./reglas";
@@ -60,7 +60,7 @@ export function sincronizar(campoId: string, usuarioId: string): ResultadoSync {
   const campo = dbRead.campos.find((c) => c.id === campoId);
   const token = campo?.tokenSenasa;
 
-  const tk = tokenValido(token); // RN15
+  const tk = tokenValido(token);
   if (!tk.ok) return { ok: false, error: tk.error, aceptados: 0, rechazados: [] };
 
   const pendientes = registrosPendientes(campoId, dbRead);

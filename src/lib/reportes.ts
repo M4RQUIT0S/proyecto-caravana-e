@@ -1,7 +1,7 @@
 "use client";
 
-// CU-09: reportes productivos y de rentabilidad. Cruza pesajes/ADPV (RN13) con costos
-// imputados (CostoAnimal) para sustentar la decisión de reposición (RU07 / RE07): detecta
+// reportes productivos y de rentabilidad. Cruza pesajes/ADPV con costos
+// imputados (CostoAnimal) para sustentar la decisión de reposición: detecta
 // la "cola de tropa" (animales que comen pero no ganan) y hallazgos por proveedor/origen.
 
 import { esActivo, estado } from "./reglas";
@@ -117,7 +117,7 @@ export interface HallazgoProveedor {
   tasaMortandad: number; // %
 }
 
-// Mortandad / morbilidad por proveedor de origen (RU07): qué procedencias rinden peor.
+// Mortandad / morbilidad por proveedor de origen: qué procedencias rinden peor.
 export function hallazgosPorProveedor(campoId: string, db: DBShape): HallazgoProveedor[] {
   const proveedores = db.proveedores.filter((p) => p.campoId === campoId);
   return proveedores

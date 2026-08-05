@@ -41,13 +41,11 @@ export async function registrar(input: {
 
   const sb = supabase();
 
-  // Username único (la columna profiles.username es unique; chequeamos antes para un mensaje claro).
-  const { data: existente } = await sb
-    .from("profiles")
-    .select("id")
-    .ilike("username", username)
-    .maybeSingle();
-  if (existente) return { ok: false, error: "Ese nombre de usuario ya está tomado." };
+  // Username único (la columna profiles.username es unique; chequeamos antes para un mensaje
+  // claro). Se usa la RPC `username_disponible` (booleana) en vez de un SELECT a profiles:
+  // así el registro anónimo no puede leer ni enumerar los emails de la tabla.
+  const { data: disponible } = await sb.rpc("username_disponible", { p_username: username });
+  if (disponible === false) return { ok: false, error: "Ese nombre de usuario ya está tomado." };
 
   const { data, error } = await sb.auth.signUp({
     email,
@@ -78,9 +76,14 @@ export async function login(identificador: string, password: string): Promise<Au
   const sb = supabase();
   let email = identificador.trim();
   if (!email.includes("@")) {
-    // Login por nombre de usuario: resolvemos su email vía RPC.
-    const { data } = await sb.rpc("email_for_username", { p_username: email });
-    if (!data) return { ok: false, error: "Usuario no encontrado." };
+    // Login por nombre de usuario: el RPC devuelve el email SÓLO si la contraseña también
+    // es correcta (antes bastaba el username, y así se podían cosechar los correos).
+    // El error es genérico a propósito: no confirma si el usuario existe.
+    const { data } = await sb.rpc("email_para_login", {
+      p_username: email,
+      p_password: password,
+    });
+    if (!data) return { ok: false, error: "Email o contraseña incorrectos." };
     email = data as string;
   }
 
@@ -105,7 +108,9 @@ export async function iniciarOAuth(provider: "google" = "google"): Promise<Simpl
     typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
   const { error } = await sb.auth.signInWithOAuth({
     provider,
-    options: { redirectTo },
+    // prompt=select_account fuerza a Google a mostrar siempre el selector de
+    // cuenta, en vez de entrar directo con la única sesión activa del navegador.
+    options: { redirectTo, queryParams: { prompt: "select_account" } },
   });
   if (error) {
     const m = error.message.toLowerCase();

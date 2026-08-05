@@ -155,13 +155,40 @@ function diffById<T extends { id: string }>(
   return { inserts, updates, deleteIds };
 }
 
+// supabase-js NO lanza cuando Postgres rechaza (RLS, FK, trigger): devuelve el fallo en
+// `error` dentro de la respuesta. Si no se mira ese campo, un rechazo pasa totalmente
+// inadvertido y el cambio queda sólo en localStorage hasta que la próxima hydrate() lo
+// pisa. Toda escritura pasa por acá para convertir ese `error` en una excepción real.
+// Rechazo del servidor: no se arregla reintentando solo (hace falta permiso, corregir el
+// dato o volver a entrar). Se distingue de una caída de red, que sí se resuelve sola.
+export class RechazoServidor extends Error {}
+
+async function exigir(
+  op: PromiseLike<{ error: { message: string } | null; status: number }>,
+  que: string
+): Promise<void> {
+  const { error, status } = await op;
+  if (!error) return;
+  // supabase-js también envuelve la caída de red en `error`, así que el mensaje no
+  // alcanza para distinguirla. El que sí distingue es el status: 0 significa que el
+  // fetch nunca llegó a completarse (sin señal); con cualquier status el servidor
+  // contestó y rechazó, que es lo único que no se arregla reintentando solo.
+  if (!status) throw new Error(`${que}: ${error.message}`);
+  throw new RechazoServidor(`${que}: ${error.message}`);
+}
+
 export async function pushDiff(prev: DBShape, next: DBShape): Promise<void> {
   if (!supabaseConfigurado()) return;
   const sb = supabase();
   const {
     data: { session },
   } = await sb.auth.getSession();
-  if (!session) return;
+  // Sin sesión no hay a dónde escribir. Antes se devolvía en silencio y el cambio moría
+  // en localStorage: si el token vence con la app abierta, lo editado se perdía sin aviso.
+  if (!session)
+    throw new RechazoServidor(
+      "la sesión expiró — volvé a iniciar sesión para guardar los cambios"
+    );
 
   const now = () => new Date().toISOString();
   const campoRow = (campo: any) => ({
@@ -175,29 +202,30 @@ export async function pushDiff(prev: DBShape, next: DBShape): Promise<void> {
   const dataRow = (obj: any) => ({ id: obj.id, campo_id: obj.campoId, data: obj, updated_at: now() });
   const invRow = (i: any) => ({ id: i.id, campo_id: i.campoId, email: i.email, data: i });
 
-  try {
-    // campos (insert primero para respetar FK de las tablas de datos)
-    const c = diffById(prev.campos, next.campos);
-    if (c.inserts.length) await sb.from("campos").insert(c.inserts.map(campoRow));
-    for (const campo of c.updates) await sb.from("campos").update(campoRow(campo)).eq("id", campo.id);
-    if (c.deleteIds.length) await sb.from("campos").delete().in("id", c.deleteIds);
+  // campos (insert primero para respetar FK de las tablas de datos)
+  const c = diffById(prev.campos, next.campos);
+  if (c.inserts.length) await exigir(sb.from("campos").insert(c.inserts.map(campoRow)), "campos");
+  for (const campo of c.updates)
+    await exigir(sb.from("campos").update(campoRow(campo)).eq("id", campo.id), "campos");
+  if (c.deleteIds.length) await exigir(sb.from("campos").delete().in("id", c.deleteIds), "campos");
 
-    // colecciones simples
-    for (const t of DATA_TABLES) {
-      const d = diffById((prev as any)[t], (next as any)[t]);
-      if (d.inserts.length) await sb.from(t).insert(d.inserts.map(dataRow));
-      for (const obj of d.updates) await sb.from(t).update(dataRow(obj)).eq("id", (obj as any).id);
-      if (d.deleteIds.length) await sb.from(t).delete().in("id", d.deleteIds);
-    }
-
-    // invitaciones
-    const inv = diffById(prev.invitaciones, next.invitaciones);
-    if (inv.inserts.length) await sb.from("invitaciones").insert(inv.inserts.map(invRow));
-    for (const i of inv.updates) await sb.from("invitaciones").update(invRow(i)).eq("id", i.id);
-    if (inv.deleteIds.length) await sb.from("invitaciones").delete().in("id", inv.deleteIds);
-  } catch (e) {
-    console.error("[supabase] pushDiff error:", e);
+  // colecciones simples
+  for (const t of DATA_TABLES) {
+    const d = diffById((prev as any)[t], (next as any)[t]);
+    if (d.inserts.length) await exigir(sb.from(t).insert(d.inserts.map(dataRow)), t);
+    for (const obj of d.updates)
+      await exigir(sb.from(t).update(dataRow(obj)).eq("id", (obj as any).id), t);
+    if (d.deleteIds.length) await exigir(sb.from(t).delete().in("id", d.deleteIds), t);
   }
+
+  // invitaciones
+  const inv = diffById(prev.invitaciones, next.invitaciones);
+  if (inv.inserts.length)
+    await exigir(sb.from("invitaciones").insert(inv.inserts.map(invRow)), "invitaciones");
+  for (const i of inv.updates)
+    await exigir(sb.from("invitaciones").update(invRow(i)).eq("id", i.id), "invitaciones");
+  if (inv.deleteIds.length)
+    await exigir(sb.from("invitaciones").delete().in("id", inv.deleteIds), "invitaciones");
 }
 
 // Registrar el hook para que cada update() local empuje su diff a Supabase.
@@ -205,12 +233,87 @@ export async function pushDiff(prev: DBShape, next: DBShape): Promise<void> {
 // inserta antes que sus animales, por la FK y el chequeo de membresía).
 let registrado = false;
 let cola: Promise<void> = Promise.resolve();
+let pendientes = 0;
+
+// Estado del último push que no llegó al servidor, y la base desde la cual reintentar.
+// Se separan dos causas porque ameritan reacciones distintas:
+//   - `fallo`: el servidor lo RECHAZÓ (RLS, validación, sesión vencida). No se arregla
+//     solo: hay que avisarle a la persona.
+//   - `sinRed`: no hubo conexión. Es el modo de trabajo normal en el campo, así que no
+//     se alarma a nadie: se reintenta apenas vuelve la señal.
+// Mientras cualquiera de los dos esté activo hay cambios que viven SÓLO en este navegador.
+let fallo: string | null = null;
+let sinRed = false;
+let baseFallo: DBShape | null = null;
+
+function avisar() {
+  if (typeof window !== "undefined")
+    window.dispatchEvent(new CustomEvent("caravanas:sync"));
+}
+
+// Sólo los rechazos del servidor se muestran; la falta de red la cubre el indicador de
+// conectividad que ya tiene la app.
+export function errorSync(): string | null {
+  return fallo;
+}
+
+// True mientras haya cambios locales que el servidor todavía no confirmó. La
+// re-hidratación en segundo plano lo consulta para no pisar con los datos del servidor
+// algo que acá no llegó a guardarse.
+export function syncOcupado(): boolean {
+  return pendientes > 0 || fallo !== null || sinRed;
+}
+
+// Todo push pasa por esta cola —incluidos los reintentos— para que no se pisen entre sí
+// y se respete el orden (el campo se inserta antes que sus animales, por la FK).
+// `siguiente` es una función porque el reintento tiene que leer el estado del momento en
+// que le toca el turno, no el de cuando se encoló.
+function encolar(base: DBShape, siguiente: () => DBShape): Promise<boolean> {
+  pendientes++;
+  // Si quedó un fallo sin resolver, el diff arranca de ahí: empujar sólo desde `base`
+  // dejaría afuera los cambios que el servidor ya había rechazado.
+  const intento = cola
+    .then(async () => {
+      await pushDiff(baseFallo ?? base, siguiente());
+      baseFallo = null;
+      fallo = null;
+      sinRed = false;
+      return true;
+    })
+    .catch((e: unknown) => {
+      baseFallo ??= base;
+      if (e instanceof RechazoServidor) {
+        fallo = e.message;
+        console.error("[supabase] push rechazado:", e);
+      } else {
+        // Caída de red (fetch no resuelve): normal sin señal, se reintenta al volver.
+        sinRed = true;
+      }
+      return false;
+    })
+    .finally(() => {
+      pendientes--;
+      avisar();
+    });
+  cola = intento.then(() => {});
+  return intento;
+}
+
+// Reintenta desde el último estado confirmado, arrastrando también lo editado después
+// del fallo. Devuelve si quedó todo sincronizado.
+export function reintentarSync(): Promise<boolean> {
+  if (!fallo && !sinRed) return Promise.resolve(true);
+  return encolar(baseFallo ?? loadDB(), loadDB);
+}
+
 export function activarSync(): void {
   if (registrado) return;
   registrado = true;
   setSyncHook((prev, next) => {
-    cola = cola.then(() => pushDiff(prev, next)).catch((e) => {
-      console.error("[supabase] cola de sync:", e);
-    });
+    void encolar(prev, () => next);
   });
+  // Al volver la señal se sube solo lo que quedó pendiente: sin esto, un cambio hecho
+  // sin conexión se quedaba esperando a la próxima edición para intentar subir.
+  if (typeof window !== "undefined")
+    window.addEventListener("online", () => void reintentarSync());
 }

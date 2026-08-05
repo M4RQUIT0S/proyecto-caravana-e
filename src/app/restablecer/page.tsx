@@ -28,6 +28,7 @@ export default function RestablecerPage() {
   // (detectSessionInUrl). Esperamos a que esa sesión exista para habilitar el formulario.
   useEffect(() => {
     if (!supabaseConfigurado()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEstado("invalido");
       return;
     }

@@ -26,7 +26,7 @@ import { rolEnCampo } from "@/lib/auth";
 import { uid, update } from "@/lib/storage";
 import { Modal } from "@/components/Modal";
 import { TonoBadge, type Tono } from "@/components/Tono";
-import { exportarAnimalesCSV, exportarAnimalesXLSX } from "@/lib/export";
+import { descargarCSV, exportarAnimalesCSV, exportarAnimalesXLSX } from "@/lib/export";
 import {
   caravanaUnicaActiva,
   colorCaravana,
@@ -35,46 +35,21 @@ import {
   validarFormatoCII,
 } from "@/lib/reglas";
 import { validarAltaCoherencia, historialDeAnimal, aptitud } from "@/lib/eventos";
-import { estado as estadoAnimal } from "@/lib/reglas";
+import { estado as estadoAnimal, fechaISO } from "@/lib/reglas";
+import { puede, permisosDe } from "@/lib/permisos";
+import { RAZAS, CATEGORIAS } from "@/lib/clasificacion";
 import type { Animal, Alerta } from "@/lib/types";
-
-// Razas/biotipos disponibles en el desplegable del formulario de animal.
-const RAZAS = [
-  "Angus",
-  "Hereford",
-  "Shorthorn",
-  "Limousin",
-  "Charolais",
-  "Fleckvieh / Simmental",
-  "Limangus",
-  "Brangus",
-  "Braford",
-  "Brahman",
-  "Bonsmara",
-  "Holando Argentino",
-  "Jersey",
-  "Pardo Suizo",
-  "Wagyu",
-  "Búfalo",
-];
-
-// Categorías disponibles en el desplegable del formulario de animal.
-const CATEGORIAS = [
-  "Ternero/a",
-  "Novillito",
-  "Novillo",
-  "Macho entero joven (MEJ)",
-  "Toro",
-  "Vaquillona",
-  "Vaca",
-];
 
 export default function AnimalesPage() {
   const { id } = useParams<{ id: string }>();
   const sp = useSearchParams();
   const { db, user, refresh } = useApp();
   const rol = rolEnCampo(user!.id, id);
-  const puedeCrear = rol === "admin" || rol === "usuario";
+  // Espejo de permisos.ts (y de member_permite en la RLS): el alta la habilita `puede()`,
+  // no una lista de roles a mano — así el Operador delegado con captura habilitada puede
+  // dar de alta, igual que se lo permite Postgres.
+  const miembro = db.campos.find((c) => c.id === id)?.miembros.find((m) => m.userId === user!.id);
+  const puedeCrear = puede(rol, "alta", permisosDe(miembro));
   const esAdmin = rol === "admin";
 
   const [filtro, setFiltro] = useState("");
@@ -104,7 +79,7 @@ export default function AnimalesPage() {
   }, [db.animales, id, loteSel, filtro]);
 
   function eliminar(animalId: string) {
-    if (!confirm("¿Dar de baja este animal? Queda inactivo pero conserva su historial (RN07).")) return;
+    if (!confirm("¿Dar de baja este animal? Queda inactivo pero conserva su historial.")) return;
     update((db) => {
       const a = db.animales.find((x) => x.id === animalId);
       if (a) {
@@ -424,16 +399,19 @@ function AnimalFormModal({
 
   useEffect(() => {
     if (open) {
+      // Reset del formulario al abrir el modal: setState-in-effect es el patrón correcto acá.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(formInicial());
+       
       setErr(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, animal?.id]);
 
-  // Validaciones en vivo para el alta (RNF-03: bloqueo, no advertencia).
+  // Validaciones en vivo para el alta (bloqueo, no advertencia).
   const ciiTrim = form.caravana.trim();
-  const formatoCII = validarFormatoCII(ciiTrim); // RN01
-  const ciiLibre = caravanaUnicaActiva(ciiTrim, campoId, db.animales, animal?.id); // RN02
+  const formatoCII = validarFormatoCII(ciiTrim);
+  const ciiLibre = caravanaUnicaActiva(ciiTrim, campoId, db.animales, animal?.id);
   const altaBloqueada = !editMode && (!formatoCII.ok || !ciiLibre.ok);
 
   function submit(e: React.FormEvent) {
@@ -455,12 +433,12 @@ function AnimalFormModal({
     }
     const sexoVal =
       form.sexo === "M" || form.sexo === "H" ? (form.sexo as "M" | "H") : undefined;
-    const coherencia = validarAltaCoherencia(form.categoria.trim() || undefined, sexoVal); // RN19
+    const coherencia = validarAltaCoherencia(form.categoria.trim() || undefined, sexoVal);
     if (coherencia) {
       setErr(coherencia);
       return;
     }
-    const tempr = identificacionTemprana(form.fechaNacimiento || undefined); // RN05
+    const tempr = identificacionTemprana(form.fechaNacimiento || undefined);
     if (!tempr.ok) {
       setErr(tempr.error!);
       return;
@@ -489,11 +467,11 @@ function AnimalFormModal({
           id: uid("a_"),
           campoId,
           ...datos,
-          estado: "activo", // RN14
-          activo: true, // RN07 (baja lógica)
+          estado: "activo",
+          activo: true, // baja lógica
           colorCaravana: colorCaravana({
             zonaVacunacionAftosa: campo?.zonaVacunacionAftosa,
-          }), // RN04
+          }),
           alertas: [],
           createdAt: Date.now(),
           updatedAt: Date.now(),
@@ -531,11 +509,11 @@ function AnimalFormModal({
               ciiTrim.length > 0 && (
                 <div className="text-[11px] mt-1 space-y-0.5">
                   <div className={formatoCII.ok ? "text-success" : "text-error"}>
-                    {formatoCII.ok ? "✓ formato OK (10 dígitos, RN01)" : `✗ ${formatoCII.error}`}
+                    {formatoCII.ok ? "✓ formato OK (10 dígitos)" : `✗ ${formatoCII.error}`}
                   </div>
                   {formatoCII.ok && (
                     <div className={ciiLibre.ok ? "text-success" : "text-error"}>
-                      {ciiLibre.ok ? "✓ CII libre (no duplicado, RN02)" : `✗ ${ciiLibre.error}`}
+                      {ciiLibre.ok ? "✓ CII libre (no duplicado)" : `✗ ${ciiLibre.error}`}
                     </div>
                   )}
                 </div>
@@ -642,7 +620,7 @@ function AnimalFormModal({
           <button
             className="btn-primary text-sm disabled:opacity-40 disabled:cursor-not-allowed"
             disabled={altaBloqueada}
-            title={altaBloqueada ? "Corregí el CII para habilitar el alta (RNF-03)." : undefined}
+            title={altaBloqueada ? "Corregí el CII para habilitar el alta." : undefined}
           >
             {editMode ? "Guardar cambios" : "Guardar animal"}
           </button>
@@ -1000,21 +978,17 @@ function HistorialTimeline({
   const items = filtro === "todos" ? all : all.filter((it) => it.tipo === filtro);
 
   function exportar() {
-    const filas = all.map((it) => ({
-      fecha: it.fecha ?? new Date(it.fechaHora).toISOString().slice(0, 10),
-      tipo: it.tipo,
-      detalle: `${it.titulo}${it.detalle ? ` — ${it.detalle}` : ""}`.replace(/"/g, "'"),
-    }));
-    const csv = "fecha,tipo,detalle\n" + filas.map((f) => `${f.fecha},${f.tipo},"${f.detalle}"`).join("\n");
-    const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `historial-${caravana}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Pasa por descargarCSV como el resto: aplica el saneo anti-fórmula (el detalle lleva
+    // texto libre del usuario) y deja el escapado en manos de Papa, que sabe de comillas
+    // y saltos de línea. Antes se armaba el CSV a mano y ninguna de las dos cosas pasaba.
+    descargarCSV(
+      all.map((it) => ({
+        fecha: it.fecha ?? fechaISO(it.fechaHora),
+        tipo: it.tipo,
+        detalle: `${it.titulo}${it.detalle ? ` — ${it.detalle}` : ""}`,
+      })),
+      `historial-${caravana}.csv`
+    );
   }
 
   return (

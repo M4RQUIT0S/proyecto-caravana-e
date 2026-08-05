@@ -1,6 +1,6 @@
 "use client";
 
-// Indicador de conectividad (RNF-01 / RNF-08 / RU02). El modo offline es un estado de
+// Indicador de conectividad. El modo offline es un estado de
 // primera clase: el sistema debe funcionar sin señal y mostrarlo siempre.
 
 import { useEffect, useState } from "react";
@@ -14,6 +14,8 @@ export function useOnline(): boolean {
     const off = () => setOnline(false);
     window.addEventListener("online", on);
     window.addEventListener("offline", off);
+    // Sincroniza el estado real de conectividad al montar (puede haber cambiado antes del mount).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOnline(navigator.onLine);
     return () => {
       window.removeEventListener("online", on);

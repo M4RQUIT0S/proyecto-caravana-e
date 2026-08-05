@@ -46,7 +46,7 @@ export default function UsuariosPage() {
       const m = c?.miembros.find((m) => m.userId === userId);
       if (m) {
         m.rol = nuevo;
-        // Al pasar a Operador delegado, se inicializan permisos acotados (RN21).
+        // Al pasar a Operador delegado, se inicializan permisos acotados.
         if (nuevo === "operador" && !m.permisos) m.permisos = { ...PERMISOS_OPERADOR_DEFAULT };
       }
     });
@@ -65,8 +65,8 @@ export default function UsuariosPage() {
   }
 
   function quitar(userId: string) {
-    // Baja lógica (RN07): el miembro queda inactivo pero conserva trazabilidad.
-    if (!confirm("¿Dar de baja a este miembro? Queda inactivo (baja lógica, RN07).")) return;
+    // Baja lógica: el miembro queda inactivo pero conserva trazabilidad.
+    if (!confirm("¿Dar de baja a este miembro? Queda inactivo (baja lógica).")) return;
     update((db) => {
       const c = db.campos.find((c) => c.id === id);
       const m = c?.miembros.find((m) => m.userId === userId);
@@ -111,10 +111,13 @@ export default function UsuariosPage() {
           Miembros
         </div>
         <ul>
+          {/* El perfil del dueño puede no estar en el caché todavía (la consulta a
+              profiles va aparte de la de campos). Antes se accedía con `!` y la página
+              entera reventaba en pantalla blanca. */}
           <Miembro
-            key={owner!.id}
-            username={owner!.username}
-            email={owner!.email}
+            key={campo.ownerId}
+            username={owner?.username || "—"}
+            email={owner?.email || "Perfil no disponible"}
             rol="admin"
             tag="Dueño"
           />
@@ -250,7 +253,7 @@ function Miembro({
             <RoleBadge rol={rol} />
           )}
           {activo && onQuitar && (
-            <button onClick={onQuitar} className="text-ink-dim hover:text-error" title="Dar de baja (RN07)">
+            <button onClick={onQuitar} className="text-ink-dim hover:text-error" title="Dar de baja">
               <Trash2 size={15} />
             </button>
           )}
@@ -265,7 +268,7 @@ function Miembro({
       {rol === "operador" && activo && (
         <div className="mt-3 rounded-xl border border-line bg-bg-soft/40 p-3">
           <div className="text-[11px] uppercase tracking-wide text-ink-dim mb-2">
-            Permisos del Operador delegado (RF-12)
+            Permisos del Operador delegado
           </div>
           <div className="flex flex-wrap gap-3">
             {PERMISO_LABEL.map(({ key, label }) => (
@@ -282,7 +285,7 @@ function Miembro({
             ))}
           </div>
           <div className="mt-2 text-[11px] text-ink-dim">
-            Denegado siempre: {DENEGADAS_LABEL.join(" · ")} (RN21 / RU09).
+            Denegado siempre: {DENEGADAS_LABEL.join(" · ")}.
           </div>
         </div>
       )}

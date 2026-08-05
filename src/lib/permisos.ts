@@ -1,4 +1,4 @@
-// Autorización por rol (RNF-05) y límites del Operador delegado (RN21).
+// Autorización por rol y límites del Operador delegado.
 // Mapa de roles del SRS sobre los roles de la app:
 //   admin    = Productor (acceso total)
 //   operador = Operador delegado (subconjunto acotado: captura/sanidad/pesaje/movimiento)
@@ -9,16 +9,16 @@ import type { MiembroCampo, PermisosOperador, Rol } from "./types";
 
 export type Accion =
   | "ver"
-  | "alta" // CU-01
-  | "capturar" // CU-02
-  | "sanidad" // CU-03
-  | "pesaje" // CU-04
-  | "movimiento" // CU-06
-  | "documentacion" // CU-07 (DT-e)
-  | "senasa" // CU-08
-  | "reportes" // CU-09
+  | "alta"
+  | "capturar"
+  | "sanidad"
+  | "pesaje"
+  | "movimiento"
+  | "documentacion" // DT-e
+  | "senasa"
+  | "reportes"
   | "costos"
-  | "catalogos" // CU-10
+  | "catalogos"
   | "admin"; // administrar usuarios/permisos
 
 export const PERMISOS_OPERADOR_DEFAULT: PermisosOperador = {
@@ -28,7 +28,7 @@ export const PERMISOS_OPERADOR_DEFAULT: PermisosOperador = {
   movimiento: false,
 };
 
-// Acciones explícitamente denegadas al Operador delegado (RN21 / RU09).
+// Acciones explícitamente denegadas al Operador delegado.
 const DENEGADAS_OPERADOR: Accion[] = [
   "costos",
   "reportes",

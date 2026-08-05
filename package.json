@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "test": "npm run test:reglas && npm run test:sync",
+    "test:reglas": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/ts-resolve.mjs scripts/test-reglas.mjs",
+    "test:sync": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/ts-resolve.mjs scripts/test-sync.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -19,11 +22,10 @@
     "next": "^16.2.6",
     "papaparse": "^5.4.1",
     "playwright-core": "1.43.0",
-    "python3": "^0.0.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "three": "^0.169.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@types/node": "^20.16.5",

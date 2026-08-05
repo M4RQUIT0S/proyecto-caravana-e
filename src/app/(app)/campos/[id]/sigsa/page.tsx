@@ -25,6 +25,9 @@ import {
 } from "lucide-react";
 import { useApp } from "@/lib/context";
 import { rolEnCampo } from "@/lib/auth";
+import { puede } from "@/lib/permisos";
+import { supabase, supabaseConfigurado } from "@/lib/supabase/client";
+import { descifrarSecreto } from "@/lib/secure-store";
 import { Modal } from "@/components/Modal";
 import {
   borrarCredencialesAfip,
@@ -46,7 +49,9 @@ export default function SigsaBotPage() {
   const { id } = useParams<{ id: string }>();
   const { db, user, refresh } = useApp();
   const rol = rolEnCampo(user!.id, id);
-  const puedeDeclarar = rol === "admin" || rol === "usuario";
+  // Declarar a SIGSA es trámite regulatorio: mismo permiso que SENASA (el Operador
+  // delegado lo tiene denegado, igual que en la RLS).
+  const puedeDeclarar = puede(rol, "senasa");
   const campo = db.campos.find((c) => c.id === id);
   const afip = campo?.afip;
 
@@ -229,14 +234,27 @@ function AfipModal({
 
   useEffect(() => {
     if (open) {
+      // Reset del formulario al abrir el modal: setState-in-effect es el patrón correcto acá.
+      /* eslint-disable react-hooks/set-state-in-effect */
       setCuit(actual ? formatCuit(actual.cuit) : "");
-      setClave(actual?.clave ?? "");
+      setClave("");
       setVerClave(false);
       setErr(null);
+      /* eslint-enable react-hooks/set-state-in-effect */
+      // La clave está cifrada en reposo: se descifra sólo para prefijar el campo al editar.
+      let cancelado = false;
+      if (actual?.clave) {
+        descifrarSecreto(actual.clave).then((c) => {
+          if (!cancelado) setClave(c);
+        });
+      }
+      return () => {
+        cancelado = true;
+      };
     }
   }, [open, actual]);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     const soloDigitos = cuit.replace(/\D/g, "");
@@ -248,7 +266,7 @@ function AfipModal({
       setErr("Ingresá tu Clave Fiscal.");
       return;
     }
-    guardarCredencialesAfip(campoId, soloDigitos, clave);
+    await guardarCredencialesAfip(campoId, soloDigitos, clave);
     onSaved();
   }
 
@@ -385,7 +403,7 @@ function LoteSigsaCard({
       window.open(SIGSA_URL, "_blank", "noopener,noreferrer");
       setTimeout(async () => {
         try {
-          await navigator.clipboard.writeText(afip.clave);
+          await navigator.clipboard.writeText(await descifrarSecreto(afip.clave));
           setCredsCopiadas("clave");
         } catch {
           // ignore — el usuario ya tiene CUIT en el portapapeles
@@ -399,12 +417,14 @@ function LoteSigsaCard({
     }
   }
 
-  function copiarClave() {
+  async function copiarClave() {
     if (!afip) return;
-    navigator.clipboard.writeText(afip.clave).then(
-      () => setCredsCopiadas("clave"),
-      () => alert("No se pudo copiar la clave.")
-    );
+    try {
+      await navigator.clipboard.writeText(await descifrarSecreto(afip.clave));
+      setCredsCopiadas("clave");
+    } catch {
+      alert("No se pudo copiar la clave.");
+    }
   }
 
   function confirmar() {
@@ -434,12 +454,19 @@ function LoteSigsaCard({
       // (Cloud Run / Docker) y se apunta su URL con NEXT_PUBLIC_BOT_URL. Sin esa
       // variable, usa la ruta interna (sólo sirve fuera de Vercel).
       const botBase = (process.env.NEXT_PUBLIC_BOT_URL ?? "").replace(/\/$/, "");
+      // El endpoint del bot exige un JWT de Supabase (no es un proxy abierto a AFIP).
+      const token = supabaseConfigurado()
+        ? (await supabase().auth.getSession()).data.session?.access_token ?? ""
+        : "";
       const res = await fetch(`${botBase}/api/sigsa/declarar`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           cuit: afip.cuit,
-          clave: afip.clave,
+          clave: await descifrarSecreto(afip.clave),
           acta: actaTrim,
           loteNombre: lote.nombre,
           animales: pendientes.map((a) => ({

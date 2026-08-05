@@ -1,7 +1,7 @@
 "use client";
 
-// CU-07: preparación de documentación regulatoria (DT-e). Bloqueo duro por carencia
-// (RF-13 / RN03) con detalle por animal, y validación de datos obligatorios (RN06).
+// preparación de documentación regulatoria (DT-e). Bloqueo duro por carencia
+// con detalle por animal, y validación de datos obligatorios.
 
 import { uid, update } from "./storage";
 import { aptoParaFaena, datosDTeObligatorios } from "./reglas";
@@ -31,7 +31,7 @@ export function prepararDTe(input: InputDTe, animales: Animal[]): ResultadoDTe {
   if (seleccion.length === 0)
     return { ok: false, error: "Seleccioná al menos un animal.", bloqueados: [] };
 
-  // Bloqueo duro por carencia / estado (RF-13 / RN03), con detalle por animal.
+  // Bloqueo duro por carencia / estado, con detalle por animal.
   const bloqueados: AnimalBloqueado[] = [];
   for (const a of seleccion) {
     const apto = aptoParaFaena(a);
