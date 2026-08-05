@@ -97,7 +97,13 @@
       "Bash(grep -rn 'join\\(\",\"\\)\\\\|\"fecha,tipo\\\\|\\\\.csv`' src/)",
       "Bash(git rev-list *)",
       "Bash(git switch *)",
-      "Bash(echo \"lint-exit:$?\")"
+      "Bash(echo \"lint-exit:$?\")",
+      "Bash(git log *)",
+      "Bash(git filter-repo *)",
+      "Bash(python -m pip show git-filter-repo)",
+      "Bash(python -m pip install git-filter-repo)",
+      "Bash(git bundle *)",
+      "Bash(git show-ref *)"
     ]
   }
 }
