@@ -310,10 +310,19 @@ grant execute on function public.username_disponible(text) to anon, authenticate
 grant execute on function public.unirme_con_codigo(text) to authenticated;
 grant execute on function public.aceptar_invitacion(text) to authenticated;
 
--- Limpieza: `public.rls_auto_enable()` es una función huérfana (no la define este
--- esquema ni la usa la app) que quedó en la base como SECURITY DEFINER ejecutable por
--- anon/authenticated → la marcaban los lints 0028/0029. Se elimina; el `if exists`
--- hace el statement idempotente para bases donde nunca existió.
+-- Limpieza: `public.rls_auto_enable()` no la define este esquema ni la usa la app, pero
+-- quedó en la base como SECURITY DEFINER ejecutable por anon/authenticated → la marcaban
+-- los lints 0028/0029. Se elimina.
+--
+-- El event trigger `ensure_rls` cuelga de ella (por eso el drop pelado falla con 2BP01),
+-- así que hay que sacarlo primero. Se lo nombra explícito en vez de usar CASCADE: si
+-- mañana depende algo más, queremos que el script falle y lo veamos, no que lo borre solo.
+--
+-- Qué se pierde: `ensure_rls` activaba RLS sola en cada tabla nueva. Este esquema activa
+-- RLS explícitamente en todas sus tablas, pero un `create table` futuro que se olvide del
+-- `enable row level security` ya no queda cubierto. Revisalo al agregar tablas.
+-- Los `if exists` hacen ambos statements idempotentes para bases donde nunca existieron.
+drop event trigger if exists ensure_rls;
 drop function if exists public.rls_auto_enable();
 
 -- ============================================================================
