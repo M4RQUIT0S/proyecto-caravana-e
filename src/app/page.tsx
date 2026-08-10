@@ -82,16 +82,16 @@ function Header() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Link
             href="/login"
-            className={`${PILL} px-4 py-2.5 text-sm text-ink-muted hover:bg-bg-soft hover:text-ink`}
+            className={`${PILL} hidden px-4 py-2.5 text-sm text-ink-muted hover:bg-bg-soft hover:text-ink sm:inline-flex`}
           >
             Entrar
           </Link>
           <Link
             href="/register"
-            className={`${PILL} bg-sage-deep px-5 py-2.5 text-sm text-bg-card shadow-lift hover:bg-accent-deep`}
+            className={`${PILL} whitespace-nowrap bg-sage-deep px-5 py-2.5 text-sm text-bg-card shadow-lift hover:bg-accent-deep`}
           >
             Crear cuenta
           </Link>
@@ -117,9 +117,10 @@ function Hero() {
             <span className="h-1.5 w-1.5 rounded-full bg-lavender-deep" />
             Gestión ganadera digital, simple de usar
           </div>
-          <h1 className="font-display text-4xl leading-[1.05] text-ink text-balance sm:text-6xl">
+          <h1 className="font-display text-4xl leading-[1.2] text-ink text-balance sm:text-6xl">
             Toda tu hacienda{" "}
-            <span className="rounded-2xl bg-sage-soft px-2 py-0.5 text-accent-deep shadow-press">
+            {/* nowrap: el resaltado partido en dos lineas se lee como dos cajas sueltas. */}
+            <span className="whitespace-nowrap rounded-2xl bg-sage-soft px-2.5 text-accent-deep shadow-press">
               bajo control
             </span>
             , desde el campo hasta el celular.
@@ -205,7 +206,11 @@ function Stats() {
 /* -------------------------------- Features --------------------------------- */
 
 /* Tintes del mockup. Van como superficie con texto `ink` encima: los tonos
-   medios con texto blanco daban ~2:1 y no pasaban AA. */
+   medios con texto blanco daban ~2:1 y no pasaban AA.
+   El cuerpo va en `ink/80` y no en `ink-muted`: ink-muted (#486848) sobre
+   sage-soft da 4.03:1 y sobre steel-soft 3.95:1, por debajo del 4.5:1 que
+   pide AA a este tamaño. ink/80 compuesto sobre el tinte más oscuro da
+   4.66:1 y conserva la jerarquía contra el título. */
 const TINTS = [
   "bg-sage-soft",
   "bg-steel-pale",
@@ -269,7 +274,7 @@ function Features() {
                 <Icon size={20} />
               </div>
               <h3 className="mt-4 font-heading text-lg text-ink">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-accent-soft">{text}</p>
+              <p className="mt-2 text-sm leading-relaxed text-ink/80">{text}</p>
             </div>
           ))}
         </div>
