@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Plus,
 } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { useApp } from "@/lib/context";
 import { rolEnCampo } from "@/lib/auth";
 import { puede, permisosDe } from "@/lib/permisos";
@@ -100,42 +101,42 @@ export default function MangaPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      {/* Indicador de modo, lo más importante de la pantalla */}
+    <div className="mx-auto max-w-2xl space-y-4">
+      <PageHeader
+        eyebrow="Día a día"
+        title="Manga"
+        subtitle="Leé la caravana con el bastón por Bluetooth, o escribí el CII a mano. Cada lectura abre el animal para registrar sanidad, pesaje o movimiento."
+      />
+
+      {/* Estado de conexión. Estar en línea es lo normal y va como una línea discreta;
+          estar sin señal SÍ es una advertencia y conserva el tratamiento de alerta,
+          porque cambia lo que el usuario puede esperar de la pantalla. */}
       <div
-        className={`rounded-2xl border p-4 flex items-center justify-between ${
+        className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm ${
           online
-            ? "border-success/30 bg-success/5"
-            : "border-error/40 bg-error/10"
+            ? "border-line bg-bg-card text-ink-muted"
+            : "border-error/40 bg-error/5 text-error"
         }`}
       >
-        <div className="flex items-center gap-3">
-          {online ? (
-            <Wifi className="text-success" />
-          ) : (
-            <WifiOff className="text-error" />
-          )}
-          <div>
-            <div className={`font-display text-lg ${online ? "text-success" : "text-error"}`}>
-              {online ? "CON CONEXIÓN" : "SIN CONEXIÓN"}
-            </div>
-            <div className="text-xs text-ink-muted">
-              {online ? "Se sincroniza al cerrar." : "Trabajás offline. Nada se pierde."}
-            </div>
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="font-display text-2xl text-warning leading-none">{pendientes}</div>
-          <div className="text-xs text-ink-muted">en cola</div>
-        </div>
+        <span className="flex items-center gap-2">
+          {online ? <Wifi size={15} /> : <WifiOff size={15} />}
+          {online
+            ? "Con conexión: lo que registres se sincroniza solo."
+            : "Sin conexión: se guarda en este dispositivo y sube cuando vuelva la señal."}
+        </span>
+        {pendientes > 0 && (
+          <span className="chip shrink-0">
+            <span className="tnum">{pendientes}</span> sin sincronizar
+          </span>
+        )}
       </div>
 
       {/* Captura */}
-      <div className="card p-5 space-y-4">
+      <div className="card space-y-4 p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ScanLine size={18} className="text-accent" />
-            <h3 className="font-display text-xl text-ink">Captura en manga</h3>
+            <h3 className="font-heading text-base text-ink">Leer caravana</h3>
           </div>
           <button
             type="button"
@@ -172,10 +173,10 @@ export default function MangaPage() {
           className="flex gap-2"
         >
           <input
-            className="input font-mono text-lg tracking-widest"
+            className="input tnum font-mono text-lg"
             value={cii}
             onChange={(e) => setCii(e.target.value)}
-            placeholder="0123456789"
+            placeholder="CII de 10 dígitos"
             inputMode="numeric"
           />
           <button className="btn-primary text-sm whitespace-nowrap">
