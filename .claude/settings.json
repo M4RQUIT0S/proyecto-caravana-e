@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git push*)",
+            "command": "node -e \"console.error(\\\"[Hook] Revisa el diff antes de pushear.\\\")\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let d=\\\"\\\";process.stdin.on(\\\"data\\\",c=>d+=c).on(\\\"end\\\",()=>{try{const i=JSON.parse(d);const p=(i.tool_input&&i.tool_input.file_path)||\\\"\\\";if(!/.(ts|tsx)$/.test(p))return;const{execSync}=require(\\\"child_process\\\");try{execSync(\\\"npx tsc --noEmit --pretty false\\\",{stdio:\\\"pipe\\\"})}catch(e){const out=String(e.stdout||\\\"\\\").split(\\\"\\n\\\").filter(l=>l.trim()).slice(0,10);if(out.length){console.error(\\\"[Hook] tsc:\\n\\\"+out.join(\\\"\\n\\\"));process.exit(2)}}}catch(e){}})\"",
+            "async": true,
+            "asyncRewake": true,
+            "timeout": 180,
+            "statusMessage": "Chequeando tipos...",
+            "rewakeSummary": "tsc encontro errores de tipo"
+          },
+          {
+            "type": "command",
+            "command": "node -e \"let d=\\\"\\\";process.stdin.on(\\\"data\\\",c=>d+=c).on(\\\"end\\\",()=>{try{const i=JSON.parse(d);const p=(i.tool_input&&i.tool_input.file_path)||\\\"\\\";if(!/.(ts|tsx|js|jsx)$/.test(p))return;const fs=require(\\\"fs\\\");if(!fs.existsSync(p))return;const hits=fs.readFileSync(p,\\\"utf8\\\").split(\\\"\\n\\\").map((l,n)=>[n+1,l]).filter(a=>/console.log/.test(a[1]));if(hits.length)console.error(\\\"[Hook] console.log en \\\"+p+\\\":\\n\\\"+hits.slice(0,5).map(a=>\\\"  \\\"+a[0]+\\\": \\\"+a[1].trim()).join(\\\"\\n\\\"))}catch(e){}})\"",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let d=\\\"\\\";process.stdin.on(\\\"data\\\",c=>d+=c).on(\\\"end\\\",()=>{try{const i=JSON.parse(d);const cmd=(i.tool_input&&i.tool_input.command)||\\\"\\\";if(!/gh pr create/.test(cmd))return;const m=JSON.stringify(i.tool_response||\\\"\\\").match(/https://github.com/[^/\\\"]+/[^/\\\"]+/pull/[0-9]+/);if(m)console.error(\\\"[Hook] PR creado: \\\"+m[0])}catch(e){}})\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const{execSync}=require(\\\"child_process\\\");const fs=require(\\\"fs\\\");try{execSync(\\\"git rev-parse --git-dir\\\",{stdio:\\\"pipe\\\"})}catch(e){process.exit(0)}try{const f=execSync(\\\"git diff --name-only HEAD\\\",{encoding:\\\"utf8\\\",stdio:[\\\"pipe\\\",\\\"pipe\\\",\\\"pipe\\\"]}).split(\\\"\\n\\\").filter(x=>/.(ts|tsx|js|jsx)$/.test(x)&&fs.existsSync(x));const bad=f.filter(x=>fs.readFileSync(x,\\\"utf8\\\").includes(\\\"console.log\\\"));if(bad.length)console.log(JSON.stringify({systemMessage:\\\"[Hook] console.log sin sacar en: \\\"+bad.join(\\\", \\\")}))}catch(e){}\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

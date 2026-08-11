@@ -4,60 +4,56 @@ const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
+      // Paleta "grafito + azul señal". Se conservan los nombres de token para que
+      // las 33 pantallas que ya los consumen se actualicen sin tocar su markup;
+      // sólo cambian los valores.
       colors: {
-        // Paleta AgroTrace (theme claro). Se conservan los nombres de token existentes
-        // para no tocar los componentes; sólo cambian los valores.
         bg: {
-          DEFAULT: "#F4F4EF", // surface-alt — fondo de la app
-          soft: "#F0F0E8", // surface-muted — inputs, hundidos, chips, hover
-          card: "#FAFAF5", // surface — cards/paneles (lo más claro, "papel")
+          DEFAULT: "#F6F7F9", // fondo de la app
+          soft: "#EFF1F4", // inputs, filas alternas, hover
+          card: "#FFFFFF", // superficie de paneles y tarjetas
         },
         line: {
-          DEFAULT: "#DEE1D8", // border
-          strong: "#C8C8C0", // border-strong (botones, divisores marcados)
+          DEFAULT: "#E1E4E8", // borde de 1px: reemplaza a la sombra como separador
+          strong: "#CBD1D8",
         },
         ink: {
-          DEFAULT: "#164113", // text (verde de marca)
-          muted: "#486848", // text-muted (secundario / labels)
-          dim: "#8C9A82", // hint / placeholders
+          DEFAULT: "#12161B", // 15.9:1 sobre blanco
+          muted: "#59636E", // 6.1:1 sobre blanco, 5.4:1 sobre bg-soft
+          dim: "#79838E", // 3.9:1 — sólo placeholders y notas al pie
         },
-        // "accent" = verde primario (estructura: links, íconos, estados activos).
+        // Azul señal. Es a la vez el color estructural y el del CTA: la paleta no
+        // tiene un segundo acento, que era justamente lo que la volvía ruidosa.
         accent: {
-          DEFAULT: "#285820", // primary-500
-          soft: "#486848", // primary-400
-          deep: "#164113", // primary-700
+          DEFAULT: "#1B3A5C", // blanco encima = 11.6:1
+          soft: "#2C5A8A",
+          deep: "#12283F",
         },
-        // "action" = naranja (sólo CTAs / atención).
         action: {
-          DEFAULT: "#FC8B00", // accent-500
-          hover: "#E57A00", // accent-600
-          soft: "#FFC078", // accent-300
-          weak: "#F8D8D0", // accent-100 (disabled)
+          DEFAULT: "#1B3A5C",
+          hover: "#12283F",
+          soft: "#E8EEF5", // fondo tenue para estados seleccionados
+          weak: "#EDEFF2", // botón deshabilitado
         },
-        success: "#285820",
-        // warning del sistema es #FC8B00, pero como texto sobre crema queda de bajo
-        // contraste; usamos un ámbar más profundo (legible AA) reservando el naranja
-        // brillante (token `action`) para los CTAs.
-        warning: "#B45309",
-        error: "#C0392B",
-        info: "#2C5F8A",
+        // Semánticos: los usan 25 archivos para estado, no para decorar.
+        // Todos verificados AA sobre blanco y sobre bg-soft.
+        success: "#1E7A4B",
+        warning: "#8A5A00",
+        error: "#B3261E",
+        info: "#1B3A5C",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
       },
+      borderRadius: {
+        DEFAULT: "6px",
+      },
       boxShadow: {
-        soft: "0 4px 14px rgba(8,56,8,0.10)",
-        sm: "0 1px 2px rgba(8,56,8,0.06)",
-        inset: "inset 0 1px 0 rgba(255,255,255,0.5)",
-      },
-      keyframes: {
-        shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
-        },
-      },
-      animation: {
-        shimmer: "shimmer 2.4s linear infinite",
+        // La jerarquía la da el borde de 1px, no la sombra. Estas quedan al ras
+        // y sólo se usan en elementos que flotan de verdad (menús, modales).
+        sm: "0 1px 2px rgba(18,22,27,0.05)",
+        soft: "0 1px 3px rgba(18,22,27,0.07), 0 1px 2px rgba(18,22,27,0.04)",
+        pop: "0 8px 24px -8px rgba(18,22,27,0.18), 0 2px 6px -2px rgba(18,22,27,0.08)",
       },
     },
   },

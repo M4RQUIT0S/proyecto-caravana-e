@@ -49,8 +49,8 @@
       "Bash(mkdir -p \"D:/_dbapply\")",
       "Read(//d//**)",
       "Bash(echo \"pg: $\\(node -e \"console.log\\(require\\('pg/package.json'\\).version\\)\"\\)\")",
-      "Bash(DBURL=\"postgresql://postgres.dhdmupcypzqwtjzfjlfk:CONTRASENA-ROTADA@aws-1-us-east-2.pooler.supabase.com:5432/postgres\" node apply.js \"D:/Proyect/supabase/schema.sql\")",
-      "Bash(DBURL=\"postgresql://postgres.dhdmupcypzqwtjzfjlfk:CONTRASENA-ROTADA@aws-1-us-east-2.pooler.supabase.com:5432/postgres\" node verify.js)",
+      "Bash(DBURL=* node apply.js *)",
+      "Bash(DBURL=* node verify.js)",
       "Bash(curl -s -o /dev/null -w \"POST sin auth -> %{http_code}\\\\n\" -X POST \"https://proyecto-caravana-e.vercel.app/api/sigsa/declarar\" -H \"Content-Type: application/json\" -d '{\"cuit\":\"20123456789\",\"clave\":\"x\",\"acta\":\"1\",\"animales\":[{\"caravana\":\"1\"}]}')",
       "Bash(curl -s -o /dev/null -w \"home -> %{http_code}\\\\n\" \"https://proyecto-caravana-e.vercel.app/\")",
       "Bash(echo \"=== EXIT: $? ===\")",
@@ -94,7 +94,22 @@
       "Bash(gh repo *)",
       "Bash(npm test *)",
       "Bash(echo \"EXIT=$?\")",
-      "Bash(grep -rn 'join\\(\",\"\\)\\\\|\"fecha,tipo\\\\|\\\\.csv`' src/)"
+      "Bash(grep -rn 'join\\(\",\"\\)\\\\|\"fecha,tipo\\\\|\\\\.csv`' src/)",
+      "Bash(git rev-list *)",
+      "Bash(git switch *)",
+      "Bash(echo \"lint-exit:$?\")",
+      "Bash(git log *)",
+      "Bash(git filter-repo *)",
+      "Bash(python -m pip show git-filter-repo)",
+      "Bash(python -m pip install git-filter-repo)",
+      "Bash(git bundle *)",
+      "Bash(git show-ref *)",
+      "Bash(git remote *)",
+      "Bash(git cherry-pick *)",
+      "Bash(grep -c '\\\\$\\\\$' supabase/schema.sql)",
+      "Bash(grep -c '\\\\$f\\\\$' supabase/schema.sql)",
+      "Bash(command -v supabase psql)",
+      "Bash(grep -o \"NEXT_PUBLIC_SUPABASE_ANON_KEY=ey.\\\\{0,10\\\\}\" .env.local)"
     ]
   }
 }

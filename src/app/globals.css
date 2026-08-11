@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -8,11 +8,13 @@
   color-scheme: light;
 }
 
+/* Fondo plano. Los degradados radiales y el grano que había acá eran decoración
+   sin función: en una app de tablas y formularios sólo agregan ruido detrás de
+   los datos. La jerarquía la dan las superficies blancas sobre el gris. */
 html,
 body {
-  background: radial-gradient(1200px 600px at 80% -10%, #ffffff 0%, transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, #e8f0e8 0%, transparent 55%), #f4f4ef;
-  color: #164113;
+  background: #f6f7f9;
+  color: #12161b;
   min-height: 100%;
 }
 
@@ -21,26 +23,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Grano muy sutil para calidez */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.02;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-}
-
 #__next,
 main {
   position: relative;
-  z-index: 1;
 }
 
 ::selection {
-  background: #ffc078;
-  color: #164113;
+  background: #d6e2ef;
+  color: #12161b;
 }
 
 /* Scrollbar */
@@ -49,46 +39,52 @@ main {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #c8c8c0;
+  background: #cbd1d8;
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #486848;
+  background: #79838e;
 }
 
 /* Reusable utilities */
+
+/* El separador es el borde de 1px, no una sombra difusa. Radio chico: los 16-28px
+   redondos son la firma visual que hace que un panel de datos parezca una tarjeta
+   de marketing. */
 .card {
-  @apply rounded-2xl border border-line bg-bg-card shadow-soft;
+  @apply rounded-md border border-line bg-bg-card;
 }
 
 .input {
-  @apply w-full rounded-xl bg-bg-soft border border-line px-4 py-2.5 text-ink placeholder:text-ink-dim focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/20 transition;
+  @apply w-full rounded-md border border-line bg-bg-card px-3 py-2 text-ink placeholder:text-ink-dim transition focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
 }
 
 /* Selects: quitar la flecha nativa (que en Windows se ve blanca al abrir) y poner una
-   chevron propia + opciones del desplegable en oscuro. */
+   chevron propia + opciones del desplegable acordes al tema. */
 select.input {
-  @apply appearance-none bg-no-repeat pr-10;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23486848' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
-  background-position: right 0.7rem center;
-  background-size: 1.05rem;
+  @apply appearance-none bg-no-repeat pr-9;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2359636e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-position: right 0.65rem center;
+  background-size: 1rem;
 }
 select.input option,
 select.input optgroup {
-  background-color: #fafaf5;
-  color: #164113;
+  background-color: #ffffff;
+  color: #12161b;
 }
 
+/* Sin `active:scale`: el rebote es un tic de landing page, no de una herramienta
+   que se usa ocho horas. El feedback lo da el cambio de color. */
 .btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-medium transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition disabled:pointer-events-none disabled:opacity-60;
 }
 
 .btn-primary {
-  @apply btn bg-action text-bg-card hover:bg-action-hover shadow-sm disabled:bg-action-weak disabled:text-ink-muted;
+  @apply btn bg-action text-white hover:bg-action-hover disabled:bg-action-weak disabled:text-ink-muted;
 }
 
 .btn-ghost {
-  @apply btn bg-bg-card border border-line-strong text-ink hover:bg-bg-soft;
+  @apply btn border border-line-strong bg-bg-card text-ink hover:bg-bg-soft;
 }
 
 .btn-danger {
@@ -96,34 +92,31 @@ select.input optgroup {
 }
 
 .chip {
-  @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-bg-soft px-2.5 py-1 text-xs text-ink-muted;
+  @apply inline-flex items-center gap-1.5 rounded border border-line bg-bg-soft px-2 py-0.5 text-xs text-ink-muted;
 }
 
 .label {
-  @apply text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted;
+  @apply text-xs font-medium uppercase tracking-[0.08em] text-ink-muted;
 }
 
-/* Jerarquía tipográfica (sans geométrica Inter), según el design system:
+/* Jerarquía tipográfica:
    - .font-display: título de pantalla (700)
    - .font-heading: heading de sección (600) */
 .font-display {
   font-family: "Inter", system-ui, sans-serif;
-  @apply font-bold tracking-tight;
+  @apply font-bold tracking-[-0.02em];
 }
 .font-heading {
   font-family: "Inter", system-ui, sans-serif;
-  @apply font-semibold tracking-tight;
+  @apply font-semibold tracking-[-0.01em];
+}
+
+/* Cifras alineadas en columna: sin esto los pesos y los EID bailan en las tablas. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 .divider {
-  @apply h-px w-full bg-gradient-to-r from-transparent via-line to-transparent;
-}
-
-.shimmer-text {
-  background: linear-gradient(90deg, #285820, #164113, #285820);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: shimmer 2.4s linear infinite;
+  @apply h-px w-full bg-line;
 }

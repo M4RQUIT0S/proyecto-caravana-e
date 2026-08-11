@@ -883,7 +883,7 @@ function AnimalBanner({
   const est = estadoAnimal(animal);
   const estDot =
     est === "activo"
-      ? "bg-action"
+      ? "bg-success"
       : est === "muerto" || est === "egresado"
       ? "bg-error"
       : "bg-warning";
