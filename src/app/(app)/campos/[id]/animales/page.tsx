@@ -218,9 +218,9 @@ export default function AnimalesPage() {
           <div
             className={`hidden md:grid ${
               esAdmin
-                ? "grid-cols-[36px_1.2fr_1.2fr_0.8fr_0.8fr_0.8fr_0.6fr_auto]"
-                : "grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_0.8fr_0.6fr_auto]"
-            } gap-3 px-5 py-3 border-b border-line text-xs uppercase tracking-wider text-ink-dim`}
+                ? "grid-cols-[36px_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_minmax(0,0.5fr)_auto]"
+                : "grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_minmax(0,0.5fr)_auto]"
+            } gap-3 px-4 py-2 border-b border-line text-xs uppercase tracking-[0.06em] text-ink-muted`}
           >
             {esAdmin && (
               <div className="flex items-center">
@@ -250,16 +250,13 @@ export default function AnimalesPage() {
               const activas = a.alertas.filter((x) => !x.resuelta).length;
               const seleccionado = seleccion.has(a.id);
               return (
-                <motion.li
+                <li
                   key={a.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: idx * 0.015 }}
                   className={`grid grid-cols-2 ${
                     esAdmin
-                      ? "md:grid-cols-[36px_1.2fr_1.2fr_0.8fr_0.8fr_0.8fr_0.6fr_auto]"
-                      : "md:grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_0.8fr_0.6fr_auto]"
-                  } gap-3 px-5 py-3 border-b border-line/60 last:border-0 hover:bg-bg-soft/60 transition cursor-pointer ${
+                      ? "md:grid-cols-[36px_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_minmax(0,0.5fr)_auto]"
+                      : "md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_minmax(0,0.5fr)_auto]"
+                  } gap-3 px-4 py-2 text-sm border-b border-line last:border-0 hover:bg-bg-soft transition cursor-pointer ${
                     seleccionado ? "bg-accent/5" : ""
                   }`}
                   onClick={() => setDetalle(a)}
@@ -274,7 +271,7 @@ export default function AnimalesPage() {
                       />
                     </div>
                   )}
-                  <div className="font-mono text-accent flex items-center gap-2">
+                  <div className="tnum font-mono text-ink flex min-w-0 items-center gap-2">
                     {a.caravana}
                     {(() => {
                       const est = estadoAnimal(a);
@@ -325,7 +322,7 @@ export default function AnimalesPage() {
                   ) : (
                     <span />
                   )}
-                </motion.li>
+                </li>
               );
             })}
           </ul>

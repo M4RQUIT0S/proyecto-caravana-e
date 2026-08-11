@@ -61,7 +61,7 @@ export default function CampoResumen() {
         icon={LayoutDashboard}
         eyebrow="Resumen del campo"
         title={campo.nombre}
-        subtitle="Un vistazo rápido a tu rodeo. Tocá cualquier tarjeta para ver el detalle de esa sección."
+        subtitle="Estado actual del establecimiento. Cada tarjeta abre la sección correspondiente."
         actions={
           <>
             <Link href={`/campos/${id}/importar`} className="btn-ghost text-sm">
@@ -88,14 +88,14 @@ export default function CampoResumen() {
         />
         <Stat
           icon={RefreshCw}
-          label="En cola (sync)"
+          label="Sin sincronizar"
           value={enCola}
           href={`/campos/${id}/senasa`}
           tono={enCola > 0 ? "info" : undefined}
         />
         <Stat
           icon={TrendingUp}
-          label="ADPV promedio"
+          label="Aumento diario promedio (kg)"
           value={adpvProm != null ? adpvProm : 0}
           href={`/campos/${id}/reportes`}
           tono={adpvProm != null && adpvProm > 0 ? "success" : undefined}
@@ -109,7 +109,7 @@ export default function CampoResumen() {
         />
         <Stat
           icon={Bot}
-          label="Pendientes SIGSA"
+          label="Sin declarar en SIGSA"
           value={sigsaPendientes}
           href={`/campos/${id}/sigsa`}
           tono={sigsaPendientes > 0 ? "warning" : undefined}
@@ -119,7 +119,7 @@ export default function CampoResumen() {
 
       <section className="card p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-display text-xl text-ink">Rangos del campo</h3>
+          <h3 className="font-heading text-base text-ink">Distribución por categoría</h3>
           <Link
             href={`/campos/${id}/animales`}
             className="text-sm text-ink-muted hover:text-ink"
