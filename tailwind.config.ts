@@ -43,7 +43,7 @@ const config: Config = {
         info: "#1B3A5C",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["Inter Variable", "system-ui", "sans-serif"],
       },
       borderRadius: {
         DEFAULT: "6px",

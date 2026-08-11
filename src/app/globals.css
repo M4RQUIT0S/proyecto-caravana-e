@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -19,7 +17,7 @@ body {
 }
 
 body {
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Inter Variable", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -103,11 +101,11 @@ select.input optgroup {
    - .font-display: título de pantalla (700)
    - .font-heading: heading de sección (600) */
 .font-display {
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Inter Variable", system-ui, sans-serif;
   @apply font-bold tracking-[-0.02em];
 }
 .font-heading {
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Inter Variable", system-ui, sans-serif;
   @apply font-semibold tracking-[-0.01em];
 }
 
