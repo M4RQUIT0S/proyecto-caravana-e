@@ -12,11 +12,8 @@
     "test:sync": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/ts-resolve.mjs scripts/test-sync.mjs"
   },
   "dependencies": {
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.6.1",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.107.0",
-    "@types/three": "^0.169.0",
     "framer-motion": "^11.3.19",
     "lucide-react": "^0.439.0",
     "next": "^16.2.6",
@@ -24,7 +21,6 @@
     "playwright-core": "1.43.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "three": "^0.169.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
