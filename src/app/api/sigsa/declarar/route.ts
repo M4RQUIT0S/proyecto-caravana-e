@@ -7,10 +7,23 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300; // Cloud Run/Docker aguanta; en Vercel se ignora si no es Pro
 
 // La web llama a este endpoint desde otro origen → CORS. Se restringe a una allowlist
-// (CORS_ORIGIN, separada por comas). Por defecto sólo se permite el propio sitio; "*"
-// hay que pedirlo explícitamente. La protección real es el bearer token (ver requireAuth).
-const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || "https://proyecto-caravana-e.vercel.app")
-  .split(",")
+// (CORS_ORIGIN, separada por comas). "*" hay que pedirlo explícitamente. La protección
+// real es el bearer token (ver requireAuth).
+//
+// El default sale del propio despliegue, no de un host escrito a mano: Vercel inyecta el
+// dominio de producción y el de esta deploy. Acá había un host fijo y quedó obsoleto en
+// cuanto el proyecto pasó a servirse desde otra URL — el endpoint respondía con el
+// Access-Control-Allow-Origin del sitio viejo y el navegador bloqueaba la llamada.
+const SELF_ORIGINS = [
+  process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  process.env.VERCEL_URL,
+]
+  .filter((h): h is string => Boolean(h))
+  .map((h) => `https://${h}`);
+
+const ALLOWED_ORIGINS = (
+  process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : SELF_ORIGINS
+)
   .map((o) => o.trim())
   .filter(Boolean);
 
@@ -40,7 +53,11 @@ function rateLimited(userId: string): boolean {
 
 function corsHeaders(origin: string | null): Record<string, string> {
   const allowAny = ALLOWED_ORIGINS.includes("*");
-  const allow = allowAny ? "*" : origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const allow = allowAny
+    ? "*"
+    : origin && ALLOWED_ORIGINS.includes(origin)
+    ? origin
+    : ALLOWED_ORIGINS[0] ?? "null";
   return {
     "Access-Control-Allow-Origin": allow,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
