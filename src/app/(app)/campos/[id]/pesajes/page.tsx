@@ -104,7 +104,7 @@ export default function PesajesPage() {
       <form onSubmit={(e) => registrar(e)} className="card p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Scale size={18} className="text-accent" />
-          <h3 className="font-display text-xl text-ink">Registrar pesaje</h3>
+          <h3 className="font-heading text-base text-ink">Registrar pesaje</h3>
         </div>
         {!online && (
           <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
@@ -194,7 +194,7 @@ export default function PesajesPage() {
       </form>
 
       <div className="card p-5">
-        <h4 className="font-display text-lg text-ink mb-3">Últimos pesajes</h4>
+        <h4 className="font-heading text-base text-ink mb-3">Últimos pesajes</h4>
         {ultimosPesajes.length === 0 ? (
           <p className="text-sm text-ink-muted">Todavía no hay pesajes.</p>
         ) : (

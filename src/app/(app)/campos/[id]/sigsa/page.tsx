@@ -82,7 +82,7 @@ export default function SigsaBotPage() {
             <Bot size={20} />
           </div>
           <div className="flex-1">
-            <h3 className="font-display text-xl text-ink">Bot SIGSA — ARCA</h3>
+            <h3 className="font-heading text-base text-ink">Bot SIGSA — ARCA</h3>
             <p className="text-sm text-ink-muted mt-1">
               Genera el archivo de carga, te abre SIGSA con tus credenciales en el
               portapapeles para que ingreses en 1 segundo, y guarda el número de acta
@@ -531,7 +531,7 @@ function LoteSigsaCard({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="font-display text-lg text-ink truncate">{lote.nombre}</div>
+            <div className="font-heading text-base text-ink truncate">{lote.nombre}</div>
             <span className="chip text-[11px]">
               {lote.categoria || "—"} · {lote.raza || "—"}
             </span>

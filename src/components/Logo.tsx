@@ -13,7 +13,7 @@ export function Logo({ size = 28 }: { size?: number }) {
         priority
       />
       <div className="leading-tight">
-        <div className="font-display text-lg text-ink">AgroTrace</div>
+        <div className="font-heading text-base text-ink">AgroTrace</div>
         <div className="text-[10px] uppercase tracking-[0.28em] text-ink-dim -mt-0.5">
           Trazabilidad
         </div>

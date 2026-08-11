@@ -121,7 +121,7 @@ export default function ReportesPage() {
         <div className="card p-5 border-warning/30">
           <div className="flex items-center gap-2 mb-3">
             <TrendingDown size={18} className="text-warning" />
-            <h3 className="font-display text-lg text-ink">Cola de tropa</h3>
+            <h3 className="font-heading text-base text-ink">Cola de tropa</h3>
             <TonoBadge tono="warning">{resumen.colaDeTropa.length}</TonoBadge>
           </div>
           <p className="text-sm text-ink-muted mb-3">
@@ -140,7 +140,7 @@ export default function ReportesPage() {
       {/* Hallazgos por proveedor */}
       {hallazgos.length > 0 && (
         <div className="card p-5">
-          <h3 className="font-display text-lg text-ink mb-3">Hallazgos por proveedor / origen</h3>
+          <h3 className="font-heading text-base text-ink mb-3">Hallazgos por proveedor / origen</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-ink-dim text-xs uppercase">
@@ -176,7 +176,7 @@ export default function ReportesPage() {
 
       {/* Detalle por animal */}
       <div className="card p-5">
-        <h3 className="font-display text-lg text-ink mb-3">Rentabilidad por animal</h3>
+        <h3 className="font-heading text-base text-ink mb-3">Rentabilidad por animal</h3>
         {resumen.filas.length === 0 ? (
           <p className="text-sm text-ink-muted">No hay animales para los filtros elegidos.</p>
         ) : (
@@ -252,7 +252,7 @@ function Costos({ campoId, onChange }: { campoId: string; onChange: () => void }
 
   return (
     <div className="card p-5">
-      <h3 className="font-display text-lg text-ink mb-3">Imputar costos</h3>
+      <h3 className="font-heading text-base text-ink mb-3">Imputar costos</h3>
       <form onSubmit={agregar} className="grid sm:grid-cols-[1fr_1fr_1fr_1.4fr_auto] gap-2 items-end">
         <Filtro label="Tipo">
           <select

@@ -723,7 +723,7 @@ function AnimalDetalle({
                 <div className="divider" />
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-display text-lg text-ink">Alertas</h4>
+                    <h4 className="font-heading text-base text-ink">Alertas</h4>
                     <span className="text-xs text-ink-dim">
                       {fresh.alertas.filter((a) => !a.resuelta).length} activas
                     </span>
@@ -887,7 +887,7 @@ function AnimalBanner({
   const aptCls =
     apt.color === "verde" ? "text-success" : apt.color === "amber" ? "text-warning" : "text-error";
   return (
-    <div className="rounded-2xl overflow-hidden border border-line shadow-soft">
+    <div className="overflow-hidden rounded-md border border-line">
       <div className="bg-accent-deep text-white p-4 sm:p-5 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
@@ -1087,7 +1087,7 @@ function ExportarMenu({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
-            className="absolute right-0 mt-2 w-48 rounded-xl border border-line bg-bg-soft shadow-lg z-20 overflow-hidden"
+            className="absolute right-0 mt-2 w-48 z-20 overflow-hidden rounded-md border border-line bg-bg-card shadow-pop"
           >
             <button
               onClick={() => {

@@ -51,28 +51,34 @@ export default function DashboardPage() {
       />
 
       {campos.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="card p-10 text-center"
-        >
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 text-accent ring-1 ring-accent/15">
-            <MapPin size={26} />
-          </div>
-          <div className="font-display text-xl text-ink">Todavía no tenés campos</div>
-          <p className="text-ink-muted text-sm mt-1 max-w-sm mx-auto leading-relaxed">
-            Un campo es tu establecimiento ganadero. Creá el primero para empezar a cargar
-            animales, o unite a uno con el código que te haya compartido un administrador.
+        <div className="card max-w-2xl p-6">
+          <h2 className="font-heading text-base text-ink">Todavía no tenés campos</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">
+            Un campo es tu establecimiento ganadero: adentro van los lotes, los animales y
+            todo lo que registres. Necesitás uno para empezar.
           </p>
-          <div className="flex justify-center gap-2 mt-5">
-            <button onClick={() => setOpenJoin(true)} className="btn-ghost text-sm">
-              Unirme con código
-            </button>
-            <button onClick={() => setOpenNew(true)} className="btn-primary text-sm">
-              Crear campo
-            </button>
-          </div>
-        </motion.div>
+          <dl className="mt-5 space-y-4 border-t border-line pt-5 text-sm">
+            <div>
+              <dt className="font-medium text-ink">Es tu propio campo</dt>
+              <dd className="mt-0.5 text-ink-muted">
+                Creálo y quedás como administrador. Después cargás los animales por planilla
+                o leyendo las caravanas.
+              </dd>
+              <button onClick={() => setOpenNew(true)} className="btn-primary mt-2.5">
+                Crear campo
+              </button>
+            </div>
+            <div>
+              <dt className="font-medium text-ink">Trabajás en el campo de otra persona</dt>
+              <dd className="mt-0.5 text-ink-muted">
+                Pedile el código de invitación al administrador y entrás con ese código.
+              </dd>
+              <button onClick={() => setOpenJoin(true)} className="btn-ghost mt-2.5">
+                Unirme con código
+              </button>
+            </div>
+          </dl>
+        </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {campos.map((c, idx) => {
@@ -93,7 +99,7 @@ export default function DashboardPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="font-display text-xl text-ink">{c.nombre}</div>
+                      <div className="font-heading text-base text-ink">{c.nombre}</div>
                       {c.descripcion && (
                         <div className="text-sm text-ink-muted mt-1 line-clamp-2">
                           {c.descripcion}

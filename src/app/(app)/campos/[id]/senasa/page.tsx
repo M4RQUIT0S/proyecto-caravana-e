@@ -108,7 +108,7 @@ function PrepararDTe({ campoId, onChange }: { campoId: string; onChange: () => v
     <div className="card p-5 space-y-4">
       <div className="flex items-center gap-2">
         <FileText size={18} className="text-accent" />
-        <h3 className="font-display text-xl text-ink">Preparar DT-e (movimiento externo)</h3>
+        <h3 className="font-heading text-base text-ink">Preparar DT-e (movimiento externo)</h3>
       </div>
       <p className="text-sm text-ink-muted">
         Se arma con datos ya cargados. Los animales en carencia se bloquean.
@@ -247,7 +247,7 @@ function Sincronizacion({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldCheck size={18} className="text-accent" />
-          <h3 className="font-display text-xl text-ink">Sincronización con SENASA</h3>
+          <h3 className="font-heading text-base text-ink">Sincronización con SENASA</h3>
         </div>
         <span className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
           <KeyRound size={13} /> {campo.tokenSenasa ? "Token cargado" : "Sin token"}

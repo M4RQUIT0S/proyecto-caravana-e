@@ -61,7 +61,7 @@ export default function InvitacionesPage() {
                 className="card p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
               >
                 <div>
-                  <div className="font-display text-xl text-ink">
+                  <div className="font-heading text-base text-ink">
                     {campo?.nombre ?? "Campo"}
                   </div>
                   <div className="text-sm text-ink-muted mt-1">

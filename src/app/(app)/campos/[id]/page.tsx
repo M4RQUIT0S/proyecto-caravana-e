@@ -165,7 +165,7 @@ export default function CampoResumen() {
       </section>
 
       <section className="card p-5">
-        <h3 className="font-display text-xl text-ink mb-2">Código de invitación</h3>
+        <h3 className="font-heading text-base text-ink mb-2">Código de invitación</h3>
         <p className="text-sm text-ink-muted">
           Compartí este código con quien quieras agregar al campo. Cualquier usuario
           registrado puede usarlo desde su dashboard.

@@ -279,7 +279,7 @@ function BotonAccion({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="flex flex-col items-center gap-2 rounded-2xl border border-line bg-bg-soft/40 py-5 text-ink hover:border-accent/40 hover:bg-accent/5 transition disabled:opacity-30 disabled:cursor-not-allowed"
+      className="flex flex-col items-center gap-2 rounded-md border border-line bg-bg-soft/40 py-5 text-ink hover:border-accent/40 hover:bg-accent/5 transition disabled:opacity-30 disabled:cursor-not-allowed"
     >
       <Icon size={26} className="text-accent" />
       <span className="text-sm">{label}</span>

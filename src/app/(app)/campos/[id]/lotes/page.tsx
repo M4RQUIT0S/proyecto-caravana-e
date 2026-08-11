@@ -66,7 +66,7 @@ export default function LotesPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="font-display text-xl text-ink">{l.nombre}</div>
+                    <div className="font-heading text-base text-ink">{l.nombre}</div>
                     <div className="text-sm text-ink-muted">
                       {l.categoria} · {l.raza}
                     </div>

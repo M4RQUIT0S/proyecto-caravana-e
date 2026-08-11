@@ -243,7 +243,7 @@ export default function CampoLayout({ children }: { children: React.ReactNode })
         <aside className="hidden lg:flex w-60 shrink-0 flex-col border-r border-line bg-bg-card">
           <div className="p-4 border-b border-line">
             <div className="label mb-1">Establecimiento</div>
-            <div className="font-display text-lg text-ink truncate">{campo.nombre}</div>
+            <div className="font-heading text-base text-ink truncate">{campo.nombre}</div>
             <div className="mt-2 flex items-center gap-2">
               <RoleBadge rol={rol} />
             </div>
@@ -293,7 +293,7 @@ export default function CampoLayout({ children }: { children: React.ReactNode })
               <div className="p-4 border-b border-line flex items-start justify-between">
                 <div className="min-w-0">
                   <div className="label mb-1">Establecimiento</div>
-                  <div className="font-display text-lg text-ink truncate">{campo.nombre}</div>
+                  <div className="font-heading text-base text-ink truncate">{campo.nombre}</div>
                   <div className="mt-2">
                     <RoleBadge rol={rol} />
                   </div>

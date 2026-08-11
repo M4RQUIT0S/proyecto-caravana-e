@@ -79,7 +79,7 @@ export default function ImportarPage() {
   return (
     <div className="space-y-6">
       <div className="card p-5">
-        <h3 className="font-display text-xl text-ink">Importar animales</h3>
+        <h3 className="font-heading text-base text-ink">Importar animales</h3>
         <p className="text-sm text-ink-muted mt-1">
           Cada archivo importado <strong className="text-ink">se carga como un lote nuevo</strong>.
           El nombre del lote se sugiere a partir del archivo, pero podés editarlo
@@ -160,7 +160,7 @@ export default function ImportarPage() {
           <div className="flex items-center gap-3">
             <CheckCircle2 className="text-accent" />
             <div>
-              <div className="font-display text-lg text-ink">Importación lista</div>
+              <div className="font-heading text-base text-ink">Importación lista</div>
               <div className="text-sm text-ink-muted">
                 Lote creado: <strong className="text-ink">{resultado.loteNombre}</strong>
                 {" — "}
@@ -245,7 +245,7 @@ function ArchivoLocal({ onParsed }: { onParsed: (state: PreviewState) => void })
       }`}
     >
       <FileText className="mx-auto mb-3 text-ink-dim" />
-      <div className="font-display text-xl text-ink">Arrastrá tu .csv o .xlsx acá</div>
+      <div className="font-heading text-base text-ink">Arrastrá tu .csv o .xlsx acá</div>
       <p className="text-sm text-ink-muted mt-1">
         O hacé click para elegirlo desde tu equipo. El nombre del archivo se usará
         como nombre del lote.
@@ -310,7 +310,7 @@ function DriveImport({ onParsed }: { onParsed: (state: PreviewState) => void }) 
     <div className="card p-6">
       <div className="flex items-center gap-2 mb-3 text-ink">
         <Cloud size={16} className="text-accent" />
-        <h4 className="font-display text-lg">Importar desde Google Drive</h4>
+        <h4 className="font-heading text-base">Importar desde Google Drive</h4>
       </div>
       <p className="text-sm text-ink-muted">
         Compartí el archivo en Drive como <strong>“Cualquiera con el enlace”</strong>{" "}
@@ -415,7 +415,7 @@ function BluetoothImport({ onParsed }: { onParsed: (state: PreviewState) => void
     <div className="card p-6 space-y-4">
       <div className="flex items-center gap-2 text-ink">
         <Bluetooth size={16} className="text-accent" />
-        <h4 className="font-display text-lg">Lector RFID por Bluetooth</h4>
+        <h4 className="font-heading text-base">Lector RFID por Bluetooth</h4>
       </div>
       <p className="text-sm text-ink-muted">
         Conectá tu lector por BLE (perfil Nordic UART). A medida que pasa caravanas,
@@ -521,7 +521,7 @@ function Preview({
     >
       <div className="flex items-center justify-between">
         <div>
-          <div className="font-display text-lg text-ink">Vista previa</div>
+          <div className="font-heading text-base text-ink">Vista previa</div>
           <div className="text-xs text-ink-muted">
             {rows.length} fila{rows.length !== 1 ? "s" : ""} detectadas. Mostrando
             primeras 8.
