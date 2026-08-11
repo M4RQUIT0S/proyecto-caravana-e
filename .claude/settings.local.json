@@ -103,7 +103,13 @@
       "Bash(python -m pip show git-filter-repo)",
       "Bash(python -m pip install git-filter-repo)",
       "Bash(git bundle *)",
-      "Bash(git show-ref *)"
+      "Bash(git show-ref *)",
+      "Bash(git remote *)",
+      "Bash(git cherry-pick *)",
+      "Bash(grep -c '\\\\$\\\\$' supabase/schema.sql)",
+      "Bash(grep -c '\\\\$f\\\\$' supabase/schema.sql)",
+      "Bash(command -v supabase psql)",
+      "Bash(grep -o \"NEXT_PUBLIC_SUPABASE_ANON_KEY=ey.\\\\{0,10\\\\}\" .env.local)"
     ]
   }
 }
