@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <rect width="100%" height="100%" fill="#f7faf2" rx="8"/>
+  <rect x="28" y="28" width="360" height="60" rx="6" fill="#23321a"/>
+  <text x="46" y="68" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="20">Caravanas Electrónicas — Dashboard</text>
+
+  <g transform="translate(28,110)" fill="#fff" font-family="Arial, Helvetica, sans-serif">
+    <rect width="220" height="96" rx="8" fill="#3b6b3b"/>
+    <text x="16" y="36" font-size="18">Mis campos</text>
+    <text x="16" y="62" font-size="12" opacity="0.9">3 campos • 128 animales</text>
+
+    <rect x="240" width="220" height="96" rx="8" fill="#2f5c2f"/>
+    <text x="256" y="36" font-size="18">Importar</text>
+    <text x="256" y="62" font-size="12" opacity="0.9">CSV • Drive • Bluetooth</text>
+  </g>
+
+  <g transform="translate(28,230)" fill="#dfeee1">
+    <rect width="740" height="170" rx="8" fill="#ffffff"/>
+    <text x="16" y="28" fill="#23321a" font-size="16">Últimas alertas</text>
+    <rect x="16" y="42" width="700" height="110" rx="6" fill="#f3f6f1"/>
+    <text x="28" y="72" fill="#1f3a1f" font-size="12">- Alerta sanitaria — Vaca 238 (resuelta)</text>
+    <text x="28" y="92" fill="#1f3a1f" font-size="12">- Falta de peso — Toro 912</text>
+  </g>
+</svg>
