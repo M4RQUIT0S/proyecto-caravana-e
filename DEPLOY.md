@@ -1,7 +1,8 @@
 # Deploy — Supabase + Vercel
 
 La app usa **Supabase** (Postgres + Auth + RLS) como backend y se despliega en **Vercel**.
-El bot SIGSA (Playwright) **no corre en Vercel**: se despliega aparte (Docker/Cloud Run).
+El bot SIGSA (Playwright) **no corre en Vercel**: corre aparte, hoy en local con un túnel gratis
+(opción A de §4); Docker/Cloud Run es la opción B, para cuando haya hosting pago.
 
 ## 1. Supabase
 
@@ -50,7 +51,7 @@ Local: copiá `.env.example` a `.env.local` (ya está en `.gitignore`) y complet
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-NEXT_PUBLIC_BOT_URL=            # URL pública del bot SIGSA (Cloud Run/Docker). Vacío si no aplica.
+NEXT_PUBLIC_BOT_URL=            # URL pública del bot SIGSA (hoy la del túnel; Cloud Run en la opción B). Vacío si no aplica.
 ```
 
 > El `anon key` es público (va al cliente); la seguridad la dan las políticas RLS.
